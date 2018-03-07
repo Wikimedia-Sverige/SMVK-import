@@ -39,7 +39,7 @@
  ''Sökord:'' <Sökord>
  |depicted people      = <Personnamn, avbildad:Wikidata_(/-separated)>
  |depicted place       = <depicted place>
- |date                 = <Fotodatum:parsed>
+ |date                 = <Fotodatum:parsed> OR <Händelse:date>
  |medium               =
  |dimensions           =
  |institution          = {{Institution:Statens museer för världskultur}}

@@ -8,7 +8,7 @@ usage:
 
 &params;
 """
-import os
+import os.path as path
 from collections import Counter, OrderedDict
 
 import pywikibot
@@ -22,12 +22,14 @@ import smvk_utils as utils
 
 MAPPINGS_DIR = 'mappings'
 DATA_FILE = 'smvk_data.csv'
+ARCHIVE_DATA_FILE = 'smvk_data_arkiv.csv'
 LOGFILE = 'smvk_mappings.log'
 DELIMITER = '¤'
 LIST_DELIMITER = '|'
 
 DEFAULT_OPTIONS = {
     'data_file': DATA_FILE,
+    'archive_data_file': ARCHIVE_DATA_FILE,
     'mapping_log_file': LOGFILE,
     'mappings_dir': MAPPINGS_DIR,
     'delimiter': DELIMITER,
@@ -38,7 +40,8 @@ DEFAULT_OPTIONS = {
 }
 PARAMETER_HELP = u"""\
 Basic smvk_updateMappings options:
--data_file:PATH         path to harvest file (DEF: {data_file})
+-data_file:PATH         path to main metadata file (DEF: {data_file})
+-archive_data_file:PATH path to archive data file (DEF: {data_file})
 -mapping_log_file:PATH  path to mappings log file (DEF: {mapping_log_file})
 -mappings_dir:PATH      path to mappings dir (DEF: {mappings_dir})
 -delimiter:STR          string used as delimiter in csv (DEF: {delimiter})
@@ -70,6 +73,11 @@ class SMVKMappingUpdater(object):
         data = load_data(self.settings.get('data_file'),
                          delimiter=self.settings.get('delimiter'),
                          list_delimiter=self.settings.get('list_delimiter'))
+        # load archive card data to ensure formatting is still valid
+        load_archive_data(
+            self.settings.get('archive_data_file'),
+            delimiter=self.settings.get('delimiter'),
+            list_delimiter=self.settings.get('list_delimiter'))
 
         self.people_to_map = Counter()
         self.ethnic_to_map = Counter()
@@ -204,7 +212,7 @@ def load_data(csv_file, delimiter=None, list_delimiter=None):
 
     :param csv_file: the filename to load
     :param delimiter: the delimiter to use for csv cells
-    :param list_delimiter: teh delimiter to use for lists within csv cells
+    :param list_delimiter: the delimiter to use for lists within csv cells
     """
     delimiter = delimiter or DELIMITER
     list_delimiter = list_delimiter or LIST_DELIMITER
@@ -247,6 +255,43 @@ def load_data(csv_file, delimiter=None, list_delimiter=None):
     return utils.relabel_inner_dicts(raw_dict, fields)
 
 
+def load_archive_data(csv_file, delimiter=None, list_delimiter=None):
+    """
+    Load and parse the provided csv file for archive_cards.
+
+    This only parses the archive_cards file, not that for the main metadata.
+    This is the only place where the original column names should be mentioned.
+
+    :param csv_file: the filename to load
+    :param delimiter: the delimiter to use for csv cells
+    :param list_delimiter: the delimiter to use for lists within csv cells
+    """
+    delimiter = delimiter or DELIMITER
+    list_delimiter = list_delimiter or LIST_DELIMITER
+    fields = OrderedDict([
+        ('Id', 'label'),
+        ('Postnr', 'db_id'),
+        ('Fotonummer', 'photo_id'),
+        ('Museum', 'museum')])
+
+    expected_header = delimiter.join(fields.keys())
+    list_columns = ('Fotonummer', )
+    raw_dict = csv_methods.csv_file_to_dict(
+        csv_file, 'Postnr', expected_header, lists=list_columns,
+        delimiter=delimiter,
+        list_delimiter=list_delimiter)
+    relabeled_dict = utils.relabel_inner_dicts(raw_dict, fields)
+
+    # re-order so photo_id is main key
+    photo_id_dict = {}
+    for k, v in relabeled_dict.items():
+        for photo_id in v.get('photo_id'):
+            if photo_id not in photo_id_dict:
+                photo_id_dict[photo_id] = []
+            photo_id_dict[photo_id].append(v)
+    return photo_id_dict
+
+
 def load_mappings(update_mappings, mappings_dir=None,
                   load_mapping_lists=None):
     """
@@ -261,8 +306,8 @@ def load_mappings(update_mappings, mappings_dir=None,
     mappings_dir = mappings_dir or MAPPINGS_DIR
     common.create_dir(mappings_dir)  # ensure it exists
 
-    expeditions_file = os.path.join(mappings_dir, 'expeditions.json')
-    museums_file = os.path.join(mappings_dir, 'museums.json')
+    expeditions_file = path.join(mappings_dir, 'expeditions.json')
+    museums_file = path.join(mappings_dir, 'museums.json')
 
     # static files
     mappings['expeditions'] = common.open_and_read_file(
@@ -383,7 +428,7 @@ def handle_args(args, usage):
     :return: dict of options
     """
     options = {}
-    expected_args = ('mapping_log_file', 'data_file',
+    expected_args = ('mapping_log_file', 'data_file', 'archive_data_file',
                      'mappings_dir', 'delimiter', 'list_delimiter',
                      'wiki_mapping_root', 'default_intro_text')
 

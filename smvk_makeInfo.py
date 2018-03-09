@@ -412,9 +412,17 @@ class SMVKItem(object):
         if self.depicted_persons:
             txt += utils.format_description_row(
                 'Avbildade personer', self.depicted_persons)
-        if self.ethnic:
-            #incl. ethnic_old ?
-            txt += utils.format_description_row('Etnisk grupp', self.ethnic)
+        if self.ethnic or self.ethnic_old:
+            ethnicities = []
+            if self.ethnic:
+                ethnicities.append(', '.join(self.ethnic))
+            if self.ethnic_old:
+                ethnic_old = ', '.join(self.ethnic_old)
+                if ethnicities:
+                    ethnic_old += ' (tidigare)'
+                ethnicities.append(ethnic_old)
+            txt += utils.format_description_row(
+                'Etnisk grupp', ethnicities, delimiter=';')
         if self.motivord:
             txt += utils.format_description_row('Motivord', self.motivord)
         if self.sokord:
@@ -478,10 +486,11 @@ class SMVKItem(object):
 
         :param strict: Whether to discard uncertain entries.
         """
-        ethnicities = utils.clean_uncertain(self.ethnic, keep=not strict)
+        ethnic = self.ethnic or self.ethnic_old
+        ethnicities = utils.clean_uncertain(ethnic, keep=not strict)
         if not ethnicities:
             return []
-        return [self.smvk_info.mappings.get('ethnic').get(ethnicity)
+        return [self.smvk_info.mappings.get('ethnic').get(ethnicity.casefold())
                 for ethnicity in ethnicities]
 
     def get_description(self, with_depicted=False):
@@ -734,10 +743,12 @@ class SMVKItem(object):
         """Construct categories from the item keyword values."""
         all_keywords = set()
         if self.motivord:
-            all_keywords.update(utils.clean_uncertain(self.motivord))
+            all_keywords.update([keyword.casefold() for keyword in
+                                 utils.clean_uncertain(self.motivord)])
         if self.sokord:
-            all_keywords.update(utils.clean_uncertain(self.sokord))
-        keyword_map = self.nm_info.mappings['keywords']
+            all_keywords.update([keyword.casefold() for keyword in
+                                 utils.clean_uncertain(self.sokord)])
+        keyword_map = self.smvk_info.mappings.get('keywords')
 
         for keyword in all_keywords:
             if keyword not in keyword_map:

@@ -137,9 +137,9 @@ class SMVKMappingUpdater(object):
         me = make_ethnic_list(
             mapping_root=self.settings.get('wiki_mapping_root'))
         intro_text = self.get_intro_text('ethnic groups')
-        merged_keywords, preserved_keywords = me.mappings_merger(
+        merged_ethnic, preserved_ethnic = me.mappings_merger(
             self.ethnic_to_map.most_common(), update=True)
-        me.save_as_wikitext(merged_keywords, preserved_keywords, intro_text)
+        me.save_as_wikitext(merged_ethnic, preserved_ethnic, intro_text)
 
     def dump_people(self):
         """Dump the people mappings to wikitext files."""
@@ -171,7 +171,7 @@ class SMVKMappingUpdater(object):
                 self.external_to_parse.update(
                     image.get('ext_id'))
 
-            # keywords
+            # keywords - compare without case
             keyword_columns = {
                 'motivord': 'motivord',
                 'sokord': 'sökord'
@@ -181,6 +181,7 @@ class SMVKMappingUpdater(object):
                     self.keywords_to_map[label] = Counter()
                 val = image.get(col) or []
                 val = utils.clean_uncertain(common.listify(val), keep=True)
+                val = [v.casefold() for v in val]
                 self.keywords_to_map[label].update(val)
 
             # people
@@ -191,11 +192,12 @@ class SMVKMappingUpdater(object):
                 self.people_to_map.update([helpers.flip_name(person)
                                            for person in val])
 
-            # ethnic groups
+            # ethnic groups - compare without case
             ethnic_columns = ('ethnic', 'ethnic_old')
             for col in ethnic_columns:
                 val = image.get(col) or []
                 val = utils.clean_uncertain(common.listify(val), keep=True)
+                val = [v.casefold() for v in val]
                 self.ethnic_to_map.update(val)
 
             # places

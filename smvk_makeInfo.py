@@ -502,6 +502,7 @@ class SMVKItem(object):
         sv_desc = '{}. '.format(self.description_clean)
         en_desc = ('{}. '.format(self.description_en.strip().rstrip(' .,'))
                    ).lstrip(' .')
+
         ethnic_data = self.get_ethnic_data(strict=False)
         if ethnic_data:
             sv_desc += '{}. '.format(', '.join(
@@ -510,12 +511,18 @@ class SMVKItem(object):
                                       for ethnicity in ethnic_data]))
             en_desc += '{}. '.format(', '.join(
                 ['{{item|%s}}' % qid for qid in qids]))
+
         sv_desc += ('{}. '.format(self.get_geo_string())).lstrip(' .')
-        if self.event:
-            #deal with [?] (prefix Probably)
-            event_data = self.get_event_data()
-            sv_desc += '{}. '.format(event_data.get('sv'))
-            en_desc += '{}. '.format(event_data.get('en'))
+
+        event_data = self.get_event_data(strict=False)
+        if event_data:
+            uncertain = False
+            if not self.get_event_data():
+                uncertain = True
+            sv_desc += '{}{}. '.format(event_data.get('sv'),
+                                       ' (troligen)' if uncertain else '')
+            en_desc += '{}{}. '.format(event_data.get('en'),
+                                       ' (probably)' if uncertain else '')
 
         desc = '{{sv|%s}}\n{{en|%s}}' % (sv_desc, en_desc)
         if with_depicted:

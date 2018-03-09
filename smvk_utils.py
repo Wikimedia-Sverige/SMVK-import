@@ -90,11 +90,16 @@ def description_cleaner(text):
         'W.Kaudern: I Celebes obygder.',
         'Walter Kaudern: I Celebes obygder',
         'W. Kaudern:" I Celebes obygder"',
+        'Publ. Kaudern. "I Celebes obygder"',
+        'Publ. Kandun. "I Celebes obygder"',
+        'Publ. Kaudern: "I Celebes obygder"',
+        'Publ. Kaudern "I Celebes obygder"',
         'W. Kaudern: Ethnographical Studies in Celebes',
         'W. Kaudern: På Madagaskar.',
         'Se Kaudern: ',
-        'Se Walter Kaudern: ',
-        'Se Linell & Kaudern: ',
+        'Se Walter Kaudern:',
+        'Se W. Kaudern:',
+        'Se Linell & Kaudern:',
         'Jfr. bildark',
         'Jfr. bildnr.',
         'Jfr. bindnr.',
@@ -104,23 +109,50 @@ def description_cleaner(text):
         'Foto av: ',
         # 'Fotograf: '
     )
-    bad_starts = (
+    bad_starts = (  # anything found before one of these should be removed
         'Motiv [Gegenstand der Aufnahme]: ',
         'Motiv/Gegenstand der Aufnahme: ',
         'Motiv: '
     )
-    # om den innehåller "Gegenstand der Aufnahme", släpp allt före?
     # clean out any [...], there may be many
     # clean out any Datum: ... . but beware of . in abbrev.
     # clean out any Ort: ... . but beware of . in abbrev.
-    # clean out (negativkuvert)
+    # clean out (negativkuvert), and similar.
     # flag odugl.
 
     for test in bad_endings:
-        if text.find(test) > 0:
+        if text.find(test) >= 0:
             text = text[:text.find(test)]
     for test in bad_starts:
-        if text.startswith(test):
-            text = text[len(test):]
+        if text.find(test) >= 0:
+            text = text[text.find(test) + len(test):]
 
     return text
+
+
+def clean_all_descriptions(filename):
+    """
+    Clean all descriptions in a file.
+
+    Load a file with one description per row, clean each and output a visible
+    diff for on-wiki consumption.
+    """
+    import os.path as path
+    base, ext = path.splitext(filename)
+    f_in = open(filename)
+    f_out = open('{}_clean{}'.format(base, ext), 'w')
+
+    for l in f_in.readlines():
+        if not l.strip():
+            f_out.write(l)
+            continue
+        cleaned = description_cleaner(l).strip()
+        if not cleaned.strip():
+            f_out.write('* {}'.format(l))
+        else:
+            start = l.find(cleaned)
+            end = start + len(cleaned)
+            f_out.write('* {}<span style="color:red">{}</span>{}'.format(
+                l[:start], cleaned, l[end:]))
+    f_in.close()
+    f_out.close()

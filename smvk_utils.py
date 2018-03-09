@@ -4,6 +4,7 @@
 import re
 import pywikibot
 import batchupload.common as common
+import batchupload.helpers as helpers
 
 
 def parse_external_ids(ext_id):
@@ -54,7 +55,7 @@ def clean_uncertain(value, keep=False):
     # return in same format as original
     if not was_list:
         if not new_list:
-            return ''  #or None?
+            return ''
         return new_list[0]
     return new_list
 
@@ -63,4 +64,63 @@ def get_last_year(date_text):
     """Attempt to extract the last year in a wikitext date template."""
     hits = re.findall('\d\d\d\d', date_text)
     if hits:
-        return hits[-1]
+        return int(hits[-1])
+
+
+def format_description_row(label, value, delimiter=','):
+    """Format a single description line."""
+    delimiter = '{} '.format(delimiter)
+    return '<br/>\n{}: {}'.format(
+        helpers.italicize('label'),
+        delimiter.join(common.listify(value)))
+
+
+def description_cleaner(text):
+    """
+    Attempt a cleanup of SMVK descriptions.
+
+    The descriptions contain a lot of info which is more of internal notes
+    character. This method contains an ugly list of such strings and attempts
+    to get rid of them.
+
+    Outsourced to the utils file because it is ugly.
+    """
+    bad_endings = (  # anything found after one of these should be removed
+        'W. Kaudern: I Celebes obygder',
+        'W.Kaudern: I Celebes obygder.',
+        'Walter Kaudern: I Celebes obygder',
+        'W. Kaudern:" I Celebes obygder"',
+        'W. Kaudern: Ethnographical Studies in Celebes',
+        'W. Kaudern: På Madagaskar.',
+        'Se Kaudern: ',
+        'Se Walter Kaudern: ',
+        'Se Linell & Kaudern: ',
+        'Jfr. bildark',
+        'Jfr. bildnr.',
+        'Jfr. bindnr.',
+        'Jfr. bild',
+        'Bildark: ',
+        # 'Neg.: ',
+        'Foto av: ',
+        # 'Fotograf: '
+    )
+    bad_starts = (
+        'Motiv [Gegenstand der Aufnahme]: ',
+        'Motiv/Gegenstand der Aufnahme: ',
+        'Motiv: '
+    )
+    # om den innehåller "Gegenstand der Aufnahme", släpp allt före?
+    # clean out any [...], there may be many
+    # clean out any Datum: ... . but beware of . in abbrev.
+    # clean out any Ort: ... . but beware of . in abbrev.
+    # clean out (negativkuvert)
+    # flag odugl.
+
+    for test in bad_endings:
+        if text.find(test) > 0:
+            text = text[:text.find(test)]
+    for test in bad_starts:
+        if text.startswith(test):
+            text = text[len(test):]
+
+    return text

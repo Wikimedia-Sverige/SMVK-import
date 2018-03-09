@@ -114,7 +114,7 @@ class SMVKInfo(MakeBaseInfo):
         for key in problematic:
             item = self.data.pop(key)
             text = '{0} -- image was skipped because of: {1}'.format(
-                item.db_id, '\n'.join(item.problems))
+                item.photo_id, '\n'.join(item.problems))
             pywikibot.output(text)
             self.log.write(text)
 
@@ -152,7 +152,7 @@ class SMVKInfo(MakeBaseInfo):
         """
         template_name = 'Photograph'
         template_data = OrderedDict()
-        template_data['photographer'] = item.get_creator()
+        template_data['photographer'] = item.get_creator_name()
         template_data['title'] = ''
         template_data['description'] = item.get_description()
         template_data['original description'] = item.get_original_description()
@@ -213,8 +213,9 @@ class SMVKInfo(MakeBaseInfo):
             cats.add(self.make_maintenance_cat('needing categorisation'))
         # @todo any others?
 
-        # creator cats are classified as meta
-        creator_cats = item.get_creator_cat()
+        # creator and event cats are classified as meta
+        item.make_event_categories()
+        creator_cats = item.get_creator_data().get('category')
         for creator_cat in creator_cats:
             cats.add(creator_cat)
 
@@ -222,7 +223,7 @@ class SMVKInfo(MakeBaseInfo):
 
     def get_original_filename(self, item):
         """Return the original image filename without file extension."""
-        return path.splitext(item.image)[0]
+        return item.photo_id
 
     def get_wikidata_info(self, qid):
         """
@@ -339,12 +340,12 @@ class SMVKItem(object):
         self.log = smvk_info.log
         self.commons = smvk_info.commons
         self.archive_cards = archive_data
-        self.description_clean = self.clean_description()
         self.geo_data = self.get_geo_data()
 
         # called at init to check for blockers or prevent multiple runs
-        self.license_text = self.get_license_text()
         self.date_text = self.get_date_text()
+        self.license_text = self.get_license_text()
+        self.description_clean = self.get_clean_description()
 
     def is_photo(self):
         """
@@ -356,36 +357,71 @@ class SMVKItem(object):
             return False
         return True
 
-    def clean_description(self):
+    def get_clean_description(self):
         """Remove meta info from description string."""
-        raise NotImplementedError
-        # strip whitespace and trailing , or .
+        desc = self.description_sv.strip()
+        if not desc:
+            self.problems.append('There is no description!')
+            return
+
+        desc = utils.description_cleaner(desc)
+
         # log problem if end result is empty
+        if not desc.strip('0123456789,.- '):
+            self.problems.append(
+                'Nothing could be salvaged of the description: {}'.format(
+                    self.description_sv))
+            return
+
+        # strip whitespace and trailing , or .
+        return desc.rstrip(' ,.')
 
     def get_title_description(self):
         """
         Construct an appropriate description for a filename.
 
-        The location part prioritises ort and region over geo_other
-        as these are cleaner. Land is always included.
+        The location part prioritises ort and region over geo_other as these
+        are cleaner. Land is always included. Uncertain entries are filterd
+        out.
         """
         txt = self.description_clean
-        geo = self.ort or self.region or self.other_geo
-        if geo or self.land:
+        geo = (
+            utils.clean_uncertain(self.ort) or
+            utils.clean_uncertain(self.region) or
+            utils.clean_uncertain(self.other_geo)
+        )
+        land = utils.clean_uncertain(self.land)
+        if geo or land:
             txt += '. {}'.format(', '.join(geo))
-            if geo and self.land:
+            if geo and land:
                 txt += '; '
-            txt += self.land
+            txt += land
         return txt
 
     def get_original_description(self):
         """Given an item get an appropriate original description."""
-        raise NotImplementedError
-        #  <sv_description><br />
-        # ''Plats:'' <Geografiskt namn, annat> (ort; region; land)<br />
-        # ''Etnisk grupp:'' <Etnisk grupp> (<Etn, tidigare>)<br />
-        # ''Nyckelord:'' <Motivord><br />
-        # ''Sökord:'' <Sökord>
+        txt = self.description_sv
+        if any([self.depicted_places, self.other_geo,
+                self.ort, self.region, self.land]):
+            places = []
+            #depicted_places?
+            raw_geo = self.geo_data.get('raw')
+            for k, v in raw_geo.items():  #rå geo_type här?
+                if v:
+                    places.append('{} ({})'.format(', '.join(v), k))
+            txt += utils.format_description_row('Plats', places, delimiter=';')
+        if self.depicted_persons:
+            txt += utils.format_description_row(
+                'Avbildade personer', self.depicted_persons)
+        if self.ethnic:
+            #incl. ethnic_old ?
+            txt += utils.format_description_row('Etnisk grupp', self.ethnic)
+        if self.motivord:
+            txt += utils.format_description_row('Motivord', self.motivord)
+        if self.sokord:
+            txt += utils.format_description_row('Sökord', self.sokord)
+
+        return txt
 
     def get_id_link(self):
         """Create the id link template."""
@@ -426,9 +462,28 @@ class SMVKItem(object):
                 'following filename: {filename}\n{template}'.format(
                     filename=filename, template=template))
 
-    def get_event_data(self):
-        """Return data about the event."""
-        return self.smvk_info.mappings.get('expeditions').get(self.event)
+    def get_event_data(self, strict=True):
+        """
+        Return data about the event.
+
+        :param strict: Whether to discard uncertain entries.
+        """
+        event = utils.clean_uncertain(self.event, keep=not strict)
+        if not event:
+            return {}
+        return self.smvk_info.mappings.get('expeditions').get(event)
+
+    def get_ethnic_data(self, strict=True):
+        """
+        Return data about ethnic groups.
+
+        :param strict: Whether to discard uncertain entries.
+        """
+        ethnicities = utils.clean_uncertain(self.ethnic, keep=not strict)
+        if not ethnicities:
+            return []
+        return [self.smvk_info.mappings.get('ethnic').get(ethnicity)
+                for ethnicity in ethnicities]
 
     def get_description(self, with_depicted=False):
         """
@@ -439,16 +494,20 @@ class SMVKItem(object):
         sv_desc = '{}. '.format(self.description_clean)
         en_desc = ('{}. '.format(self.description_en.strip().rstrip(' .,'))
                    ).lstrip(' .')
-        if self.ethnic:
-            sv_desc += '{}. '.format(self.ethnic)
-            qid = self.smvk_info.mappings.get('ethnic').get(self.ethnic)
-            if qid:
-                en_desc += '{{item|%s}}. ' % qid
+        ethnic_data = self.get_ethnic_data(strict=False)
+        if ethnic_data:
+            sv_desc += '{}. '.format(', '.join(
+                [ethnicity.get('name') for ethnicity in ethnic_data]))
+            qids = list(filter(None, [ethnicity.get('wikidata')
+                                      for ethnicity in ethnic_data]))
+            en_desc += '{}. '.format(', '.join(
+                ['{{item|%s}}' % qid for qid in qids]))
         sv_desc += ('{}. '.format(self.get_geo_string())).lstrip(' .')
         if self.event:
-            event = self.get_event_data()
-            sv_desc += '{}. '.format(event.get('sv'))
-            en_desc += '{}. '.format(event.get('en'))
+            #deal with [?] (prefix Probably)
+            event_data = self.get_event_data()
+            sv_desc += '{}. '.format(event_data.get('sv'))
+            en_desc += '{}. '.format(event_data.get('en'))
 
         desc = '{{sv|%s}}\n{{en|%s}}' % (sv_desc, en_desc)
         if with_depicted:
@@ -474,8 +533,8 @@ class SMVKItem(object):
 
         :param wrap: whether to wrap the result in {{depicted place}}.
         """
-        # how to handle self.depicted_place?
-        if self.depicted_place:
+        # how to handle self.depicted_places? also [?] in this
+        if self.depicted_places:
             raise NotImplementedError
         if not self.geo_data:
             return ''
@@ -516,20 +575,30 @@ class SMVKItem(object):
 
         If any 'other_geo' value is matched the wikidata ids are returned and
         the categories are added as content_cats.
+
+        Uncertain entries are filtered out from everything except raw.
         """
-        # how to handle self.depicted_place?
-        if self.depicted_place:
-            raise NotImplementedError
+        # how to handle self.depicted_places?
+        # also [?] for this
+        if self.depicted_places:
+            print('depicted_places:{}; other: {}; ort: {}; '
+                  'region: {}; country: {}'.format(
+                    self.depicted_places, self.other_geo, self.ort,
+                    self.region, self.land))
+            #raise NotImplementedError
 
         wikidata = OrderedDict()
         commonscats = OrderedDict()
         labels = OrderedDict()
+        raw = OrderedDict()
         for geo_type in GEO_ORDER:
             # all except country are lists so handle all as lists
             wikidata_type = {}
             commonscats_type = []
             labels_type = []
-            for geo_entry in common.listify(self.getattr(geo_type)):
+            geo_entries_raw = common.listify(getattr(self, geo_type))
+            geo_entries = utils.clean_uncertain(geo_entries_raw)
+            for geo_entry in geo_entries:
                 label = geo_entry.strip()
                 mapping = self.smvk_info.mapped_and_wikidata(
                     geo_entry, self.smvk_info.mappings['places'])
@@ -541,6 +610,7 @@ class SMVKItem(object):
             wikidata[geo_type] = wikidata_type
             commonscats[geo_type] = list(set(commonscats_type))
             labels[geo_type] = labels_type
+            raw[geo_type] = geo_entries_raw
 
         # assume country is always mapped
         if len(list(filter(None, commonscats.values()))) <= 1:
@@ -550,7 +620,8 @@ class SMVKItem(object):
         return {
             'wd': wikidata,
             'commonscats': commonscats,
-            'labels': labels
+            'labels': labels,
+            'raw': raw
         }
 
     def get_references(self):
@@ -575,34 +646,40 @@ class SMVKItem(object):
             person, self.smvk_info.mappings['people'])
         return mapping or {'name': person}
 
-    def get_creator(self, data=False):
-        """
-        Return correctly formated creator values in wikitext.
+    def get_creator_name(self, data=False):
+        """Return correctly formated creator values in wikitext."""
+        uncertain = False
+        person_data = self.get_creator_data()
+        if not person_data:
+            # check if it was filtered out due to uncertainty
+            person_data = self.get_creator_data(strict=False)
+            uncertain = True
 
-        :param data: return data on creator rather than formated value.
-        """
-        person = self.creator or self.photographer  # don't support both
-        if not person:
-            # return anon
-            # add meta cat or problem
-            raise NotImplementedError
-        person_data = self.get_person_data(person)
-        if data:
-            return person_data
+        if not person_data:
+            return '{{unknown|author}}'
 
+        txt = ''
+        if uncertain:
+            txt = '{{Probably}} '
         if person_data.get('creator'):
-            return '{{Creator:%s}}' % person_data.get('creator')
+            txt += '{{Creator:%s}}' % person_data.get('creator')
         elif person_data.get('wikidata'):
-            return '{{item|%s}}' % person_data.get('wikidata')
+            txt += '{{item|%s}}' % person_data.get('wikidata')
         else:
-            return person_data.get('name')
+            txt += person_data.get('name')
+        return txt
 
-    def get_creator_cat(self):
-        """Return the commonscat(s) for the creator(s)."""
+    def get_creator_data(self, strict=True):
+        """
+        Return the mapped person data for the creator(s).
+
+        :param strict: Whether to discard uncertain entries.
+        """
         person = self.creator or self.photographer  # don't support both
+        person = utils.clean_uncertain(person, keep=not strict)
         if person:
-            person_data = self.get_person_data(person)
-            return person_data.get('category')
+            return self.get_person_data(person)
+        return {}
 
     def get_depicted_person(self, wrap=False):
         """
@@ -619,7 +696,7 @@ class SMVKItem(object):
             return ''
 
         formatted_people = []
-        for person in self.depicted_persons:
+        for person in utils.clean_uncertain(self.depicted_persons, keep=True):
             person_data = self.get_person_data(person)
             if person_data.get('category'):
                 self.content_cats.add(person_data.get('category'))
@@ -650,18 +727,26 @@ class SMVKItem(object):
         self.meta_cats.add('needing categorisation (place)')
         return False
 
+    def make_event_categories(self):
+        """Construct categories from the event data."""
+        event_data = self.get_event_data()  # filter out uncertain entries
+        if event_data:
+            self.content_cats.add(event_data.get('cat'))
+
     def make_ethnic_categories(self):
         """Construct categories from the ethnicity data."""
-        raise NotImplementedError
+        ethnic_data = self.get_ethnic_data()  # filters out uncertain
+        for ethnicity in ethnic_data:
+            if ethnicity.get('category'):
+                self.content_cats.add(ethnicity.get('category'))
 
     def make_item_keyword_categories(self):
         """Construct categories from the item keyword values."""
-        raise NotImplementedError
         all_keywords = set()
         if self.motivord:
-            all_keywords.update(self.motivord)
+            all_keywords.update(utils.clean_uncertain(self.motivord))
         if self.sokord:
-            all_keywords.update(self.sokord)
+            all_keywords.update(utils.clean_uncertain(self.sokord))
         keyword_map = self.nm_info.mappings['keywords']
 
         for keyword in all_keywords:
@@ -708,7 +793,7 @@ class SMVKItem(object):
         #     {{PD-old-auto}}
         # photo, creator known and image date < 1969
         #     {{PD-Sweden-photo}}
-        creator = self.get_creator(data=True)
+        creator = self.get_creator_data()  # skips any uncertain
         if creator:
             death_year = creator.get('death_year')
             creation_year = utils.get_last_year(self.date_text)
@@ -732,12 +817,11 @@ class SMVKItem(object):
             self.problems.append(
                 'The creator is unknown so PD status cannot be verified.')
 
-    # do not run self.date through self.clean_uncertain()
+    # do not run self.date through util.clean_uncertain(),
+    # helpers.std_data_range handles any comments
     def get_date_text(self):
         """Format a creation date statement."""
-        #fallback to eventdate
         if self.date:
-            # helpers handles any comments
             clean_date = '|'.join(self.date).replace('[', '').replace(']', '')
             date_text = helpers.std_date_range(clean_date, range_delimiter='|')
 
@@ -745,7 +829,13 @@ class SMVKItem(object):
                 self.meta_cats.add('needing date formatting')
             else:
                 return date_text
-        return ''
+        elif self.get_event_data():
+            event_date = self.get_event_data().get('date')
+            if len(event_date) == 2:
+                return '{{other date|-|%s|%s}}' % tuple(event_date)
+            else:
+                return event_date[0]
+        return '{{unknown|date}}'
 
     def get_notes(self):
         """
@@ -754,7 +844,6 @@ class SMVKItem(object):
         The note statement combines any archive cards and any mentions of this
         image in other databases.
         """
-        raise NotImplementedError
         txt = ''
         if self.archive_cards:
             txt += 'Related archive card(s): {}'.format(

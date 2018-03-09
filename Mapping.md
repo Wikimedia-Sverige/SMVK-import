@@ -34,6 +34,7 @@
 {{en|<en_description>}}
  |original description = <sv_description><br />
  ''Plats:'' <Geografiskt namn, annat><br />
+ ''Avbildade personer:'' <Personnamn, avbildad><br />
  ''Etnisk grupp:'' <Etnisk grupp> (<Etn, tidigare>)<br />
  ''Nyckelord:'' <Motivord><br />
  ''Sökord:'' <Sökord>

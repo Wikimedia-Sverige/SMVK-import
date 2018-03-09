@@ -164,7 +164,9 @@ class SMVKMappingUpdater(object):
 
             if image.get('event'):
                 self.expedition_to_match.update(
-                    common.listify(image.get('event')))
+                    utils.clean_uncertain(
+                        common.listify(image.get('event')),
+                        keep=True))
             if image.get('ext_id'):
                 self.external_to_parse.update(
                     image.get('ext_id'))
@@ -178,20 +180,23 @@ class SMVKMappingUpdater(object):
                 if label not in self.keywords_to_map:
                     self.keywords_to_map[label] = Counter()
                 val = image.get(col) or []
-                self.keywords_to_map[label].update(common.listify(val))
+                val = utils.clean_uncertain(common.listify(val), keep=True)
+                self.keywords_to_map[label].update(val)
 
             # people
             people_columns = ('depicted_persons', 'photographer', 'creator')
             for col in people_columns:
                 val = image.get(col) or []
+                val = utils.clean_uncertain(common.listify(val), keep=True)
                 self.people_to_map.update([helpers.flip_name(person)
-                                           for person in common.listify(val)])
+                                           for person in val])
 
             # ethnic groups
             ethnic_columns = ('ethnic', 'ethnic_old')
             for col in ethnic_columns:
                 val = image.get(col) or []
-                self.ethnic_to_map.update(common.listify(val))
+                val = utils.clean_uncertain(common.listify(val), keep=True)
+                self.ethnic_to_map.update(val)
 
             # places
             place_columns = ('land', 'region', 'ort', 'other_geo',
@@ -200,7 +205,8 @@ class SMVKMappingUpdater(object):
                 if col not in self.places_to_map:
                     self.places_to_map[col] = Counter()
                 val = image.get(col) or []
-                self.places_to_map[col].update(common.listify(val))
+                val = utils.clean_uncertain(common.listify(val), keep=True)
+                self.places_to_map[col].update(val)
 
 
 def load_data(csv_file, delimiter=None, list_delimiter=None):
@@ -239,7 +245,8 @@ def load_data(csv_file, delimiter=None, list_delimiter=None):
         ('Referens / källa', 'reference_source'),
         ('Region/Ort, ursprung', 'depicted_places'),
         ('Media/Licens', 'license'),
-        ('Museum', 'museum')])
+        ('Museum', 'museum')
+    ])
 
     expected_header = delimiter.join(fields.keys())
     list_columns = (

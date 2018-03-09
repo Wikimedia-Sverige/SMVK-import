@@ -199,8 +199,7 @@ class SMVKMappingUpdater(object):
                 self.ethnic_to_map.update(val)
 
             # places
-            place_columns = ('land', 'region', 'ort', 'other_geo',
-                             'depicted_places')
+            place_columns = ('land', 'region', 'ort', 'depicted_places')
             for col in place_columns:
                 if col not in self.places_to_map:
                     self.places_to_map[col] = Counter()

@@ -26,11 +26,10 @@ BATCH_CAT = 'Media_contributed_by_SMVK'  # stem for maintenance categories
 BATCH_DATE = '2018-02'  # branch for this particular batch upload
 BASE_NAME = u'smvk_data'
 LOGFILE = 'smvk_processing.log'
-GEO_ORDER = ('other_geo', 'ort', 'region', 'land')
+GEO_ORDER = ('ort', 'region', 'depicted_places', 'land')
 DATA_FILE = 'smvk_data.csv'
 
 
-#@todo: handle all [?] entries (utils.clean_uncertain)
 class SMVKInfo(MakeBaseInfo):
     """Construct descriptions + filenames for a Nordic Museum batch upload."""
 
@@ -380,14 +379,16 @@ class SMVKItem(object):
         """
         Construct an appropriate description for a filename.
 
-        The location part prioritises ort and region over geo_other as these
-        are cleaner. Land is always included. Uncertain entries are filterd
+        The location part prioritises ort and region over depicted_places and
+        other_geo as these are cleaner. Land is always included. Uncertain
+        entries are filterd out.
         out.
         """
         txt = self.description_clean
         geo = (
             utils.clean_uncertain(self.ort) or
             utils.clean_uncertain(self.region) or
+            utils.clean_uncertain(self.depicted_places) or
             utils.clean_uncertain(self.other_geo)
         )
         land = utils.clean_uncertain(self.land)
@@ -401,11 +402,9 @@ class SMVKItem(object):
     def get_original_description(self):
         """Given an item get an appropriate original description."""
         txt = self.description_sv
-        if any([self.depicted_places, self.other_geo,
-                self.ort, self.region, self.land]):
+        raw_geo = self.geo_data.get('raw')
+        if any(raw_geo.values()):
             places = []
-            #depicted_places?
-            raw_geo = self.geo_data.get('raw')
             for k, v in raw_geo.items():  #rå geo_type här?
                 if v:
                     places.append('{} ({})'.format(', '.join(v), k))
@@ -533,14 +532,8 @@ class SMVKItem(object):
 
         :param wrap: whether to wrap the result in {{depicted place}}.
         """
-        # how to handle self.depicted_places? also [?] in this
-        if self.depicted_places:
-            raise NotImplementedError
-        if not self.geo_data:
-            return ''
         wikidata = self.geo_data.get('wd')
         label_data = self.geo_data.get('labels')
-
         depicted = []
         for geo_type, labels in label_data.items():
             depicted_type = []
@@ -560,6 +553,8 @@ class SMVKItem(object):
             if found_wd:
                 break
 
+        if not depicted:
+            return ', '.join(self.geo_data.get('other'))
         depicted_str = '; '.join(depicted)
         if not wrap:
             return depicted_str
@@ -578,15 +573,6 @@ class SMVKItem(object):
 
         Uncertain entries are filtered out from everything except raw.
         """
-        # how to handle self.depicted_places?
-        # also [?] for this
-        if self.depicted_places:
-            print('depicted_places:{}; other: {}; ort: {}; '
-                  'region: {}; country: {}'.format(
-                    self.depicted_places, self.other_geo, self.ort,
-                    self.region, self.land))
-            #raise NotImplementedError
-
         wikidata = OrderedDict()
         commonscats = OrderedDict()
         labels = OrderedDict()
@@ -617,11 +603,15 @@ class SMVKItem(object):
             # just knowing country is pretty bad
             self.meta_cats.add('needing categorisation (place)')
 
+        # add other_geo to raw
+        raw['other_geo'] = self.other_geo
+
         return {
             'wd': wikidata,
             'commonscats': commonscats,
             'labels': labels,
-            'raw': raw
+            'raw': raw,
+            'other': utils.clean_uncertain(self.other_geo)
         }
 
     def get_references(self):

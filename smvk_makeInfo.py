@@ -204,13 +204,11 @@ class SMVKInfo(MakeBaseInfo):
         :return: list of categories (without "Category:" prefix)
         """
         cats = set([self.make_maintenance_cat(cat) for cat in item.meta_cats])
-
         cats.add(self.batch_cat)
 
         # problem cats
         if not content_cats:
             cats.add(self.make_maintenance_cat('needing categorisation'))
-        # @todo any others?
 
         # creator and event cats are classified as meta
         item.make_event_categories()
@@ -296,7 +294,6 @@ class SMVKInfo(MakeBaseInfo):
 
         return options
 
-    # @todo update
     @classmethod
     def main(cls, *args):
         """Command line entry-point."""
@@ -405,8 +402,9 @@ class SMVKItem(object):
         raw_geo = self.geo_data.get('raw')
         if any(raw_geo.values()):
             places = []
-            for k, v in raw_geo.items():  #rå geo_type här?
+            for k, v in raw_geo.items():
                 if v:
+                    # @todo: consider using other lables than plain geo_type
                     places.append('{} ({})'.format(', '.join(v), k))
             txt += utils.format_description_row('Plats', places, delimiter=';')
         if self.depicted_persons:

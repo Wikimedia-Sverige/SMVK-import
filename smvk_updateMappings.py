@@ -22,14 +22,14 @@ import smvk_utils as utils
 
 MAPPINGS_DIR = 'mappings'
 DATA_FILE = 'smvk_data.csv'
-ARCHIVE_DATA_FILE = 'smvk_data_arkiv.csv'
+ARCHIVE_FILE = 'smvk_data_arkiv.csv'
 LOGFILE = 'smvk_mappings.log'
 DELIMITER = '¤'
 LIST_DELIMITER = '|'
 
 DEFAULT_OPTIONS = {
     'data_file': DATA_FILE,
-    'archive_data_file': ARCHIVE_DATA_FILE,
+    'archive_file': ARCHIVE_FILE,
     'mapping_log_file': LOGFILE,
     'mappings_dir': MAPPINGS_DIR,
     'delimiter': DELIMITER,
@@ -41,7 +41,7 @@ DEFAULT_OPTIONS = {
 PARAMETER_HELP = u"""\
 Basic smvk_updateMappings options:
 -data_file:PATH         path to main metadata file (DEF: {data_file})
--archive_data_file:PATH path to archive data file (DEF: {data_file})
+-archive_file:PATH      path to archive data file (DEF: {archive_file})
 -mapping_log_file:PATH  path to mappings log file (DEF: {mapping_log_file})
 -mappings_dir:PATH      path to mappings dir (DEF: {mappings_dir})
 -delimiter:STR          string used as delimiter in csv (DEF: {delimiter})
@@ -75,7 +75,7 @@ class SMVKMappingUpdater(object):
                          list_delimiter=self.settings.get('list_delimiter'))
         # load archive card data to ensure formatting is still valid
         load_archive_data(
-            self.settings.get('archive_data_file'),
+            self.settings.get('archive_file'),
             delimiter=self.settings.get('delimiter'),
             list_delimiter=self.settings.get('list_delimiter'))
 
@@ -436,7 +436,7 @@ def handle_args(args, usage):
     :return: dict of options
     """
     options = {}
-    expected_args = ('mapping_log_file', 'data_file', 'archive_data_file',
+    expected_args = ('mapping_log_file', 'data_file', 'archive_file',
                      'mappings_dir', 'delimiter', 'list_delimiter',
                      'wiki_mapping_root', 'default_intro_text')
 

@@ -80,6 +80,9 @@ class SMVKInfo(MakeBaseInfo):
         """
         if entry in mapping:
             mapped_info = mapping.get(entry)
+            if mapped_info.get('enriched'):
+                return mapped_info
+
             if mapped_info.get('wikidata'):
                 wd_data = self.get_wikidata_info(mapped_info.get('wikidata'))
                 for k, v in wd_data.items():
@@ -91,6 +94,7 @@ class SMVKInfo(MakeBaseInfo):
                     mapped_info['category'].append(commonscat)
                     mapped_info['category'] = list(
                         set(mapped_info['category']))
+            mapped_info['enriched'] = True  # no need to do this again
             return mapped_info
         return {}
 
@@ -212,7 +216,7 @@ class SMVKInfo(MakeBaseInfo):
 
         # creator and event cats are classified as meta
         item.make_event_categories()
-        creator_cats = item.get_creator_data().get('category')
+        creator_cats = item.get_creator_data().get('category', [])
         for creator_cat in creator_cats:
             cats.add(creator_cat)
 
@@ -474,9 +478,7 @@ class SMVKItem(object):
         :param strict: Whether to discard uncertain entries.
         """
         event = utils.clean_uncertain(self.event, keep=not strict)
-        if not event:
-            return {}
-        return self.smvk_info.mappings.get('expeditions').get(event)
+        return self.smvk_info.mappings.get('expeditions').get(event, {})
 
     def get_ethnic_data(self, strict=True):
         """
@@ -488,8 +490,10 @@ class SMVKItem(object):
         ethnicities = utils.clean_uncertain(ethnic, keep=not strict)
         if not ethnicities:
             return []
-        return [self.smvk_info.mappings.get('ethnic').get(ethnicity.casefold())
-                for ethnicity in ethnicities]
+        return filter(
+            None,
+            [self.smvk_info.mappings.get('ethnic').get(ethnicity.casefold())
+             for ethnicity in ethnicities])
 
     def get_description(self, with_depicted=False):
         """
@@ -719,7 +723,7 @@ class SMVKItem(object):
         matching categoires for the geo_type where the first match is found.
         """
         found_cat = False
-        for geo_type, geo_cats in self.geo_data.get('commonscats'):
+        for geo_type, geo_cats in self.geo_data.get('commonscats').items():
             for geo_cat in geo_cats:
                 if self.smvk_info.category_exists(geo_cat):
                     self.content_cats.add(geo_cat)
@@ -742,7 +746,7 @@ class SMVKItem(object):
         ethnic_data = self.get_ethnic_data()  # filters out uncertain
         for ethnicity in ethnic_data:
             if ethnicity.get('category'):
-                self.content_cats.add(ethnicity.get('category'))
+                self.content_cats.update(ethnicity.get('category'))
 
     def make_item_keyword_categories(self):
         """Construct categories from the item keyword values."""

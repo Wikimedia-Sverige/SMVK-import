@@ -90,39 +90,58 @@ def description_cleaner(text, structured=False):
     """
     delimiter = '¤'
     bad_endings = (  # anything found after one of these should be removed
-        'W. Kaudern: I Celebes obygder',
-        'W.Kaudern: I Celebes obygder.',
-        'Walter Kaudern: I Celebes obygder',
-        'W. Kaudern:" I Celebes obygder"',
-        'Publ. Kaudern. "I Celebes obygder"',
-        'Publ. Kandun. "I Celebes obygder"',
-        'Publ. Kaudern: "I Celebes obygder"',
-        'Publ. Kaudern "I Celebes obygder"',
-        'W. Kaudern: Ethnographical Studies in Celebes',
-        'W. Kaudern: På Madagaskar.',
+        'Publ. Kaudern',
+        'Publ. Walter Kaudern',
+        'Publ. W. Kaudern',
+        'Publ. W.Kaudern',
+        'Publ. Kandun',
         'Se Kaudern: ',
         'Se Walter Kaudern:',
         'Se W. Kaudern:',
+        'Se W.Kaudern:',
         'Se Linell & Kaudern:',
+        'Walter Kaudern: I Celebes obygder',
+        'W. Kaudern: I Celebes obygder',
+        'W.Kaudern: I Celebes obygder.',
+        'W. Kaudern:" I Celebes obygder"',
+        'W. Kaudern: Ethnographical Stud',
+        'W. Kaudern: Structures and settlements',
+        'W. Kaudern: På Madagaskar.',
         'Jfr. bildark',
         'Jfr. bildnr.',
         'Jfr. bindnr.',
         'Jfr. bild',
         'Bildark: ',
-        # 'Neg.: ',
+        'Erh: gm köp av',
+        'Erh: gm. köp av',
+        'Erh.: gm köp av',
+        'Erh.: gm. köp av',
+        'Erh. gm. köp av',
+        'erhållen gm. köp av',
+        'Erhållet genom köp av',
+        'Bilden erhållen genom köp av',
+        'Neg.: ',
+        # 'Negnr',
+        # 'Neg.nr',
         'Foto av: ',
         # 'Fotograf: '
     )
     bad_starts = (  # anything found before one of these should be removed
         'Motiv [Gegenstand der Aufnahme]:',
-        'Motiv [Gegenstand der Aufnahmne]:'
+        'Motiv [Gegenstand der Aufnahmne]:',
         'Motiv/Gegenstand der Aufnahme:',
-        'Motiv: '
+        'Motiv: ',
+        'Gegenstand der Aufnahme',
     )
-    # clean out any [...], there may be many
+    bad_middle = (  # these should be removed wherever they are found
+        '(negativkuvert)',
+        '(negativpåse)',
+        '(Katalogkort)',
+        '(katalogkort)',
+        '(glasplåt)',
+    )
     # clean out any Datum: ... . but beware of . in abbrev.
     # clean out any Ort: ... . but beware of . in abbrev.
-    # clean out (negativkuvert), and similar.
     # flag odugl.
 
     for test in bad_endings:
@@ -133,6 +152,13 @@ def description_cleaner(text, structured=False):
             text = text[text.find(test) + len(test):]
 
     # remove blocks inside kept text
+    for test in bad_middle:
+        if text.find(test) >= 0:
+            start = text.find(test)
+            end = start + len(test)
+            text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()
+
+    # clean out any [...], there may be many
     while text.find('[') >= 0:
         start = text.find('[')
         end = text.find(']', start)
@@ -140,9 +166,10 @@ def description_cleaner(text, structured=False):
             break
         text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()
 
-    # merge removed blocks
+    # merge removed blocks and ignore any at the ends
     while text.find(delimiter * 2) >= 0:
         text = text.replace(delimiter * 2, delimiter)
+    text = text.strip(delimiter)
 
     if structured:
         return text.split(delimiter)
@@ -162,12 +189,23 @@ def clean_all_descriptions(filename):
     f_in = open(filename)
     f_out = open('{}_clean{}'.format(base, ext), 'w')
 
+    intro = (
+        'Preview of description cleanup for SMVK.\n'
+        '{} text is discarded, <span style="color:blue">{}</span> text is '
+        'kept, <span style="color:red">{}</span> indicates a description '
+        'which was completely discarded.\n\n----\n\n'.format(
+            helpers.bolden('Black'),
+            helpers.bolden('blue'),
+            helpers.bolden('red')))
+    f_out.write(intro)
+
     for l in f_in.readlines():
-        if not l:
-            continue
+        if not l.strip():
+            f_out.write('* {}'.format(l))
         cleaned = description_cleaner(l, structured=True)
         if not any(block.strip() for block in cleaned):
-            f_out.write('* {}'.format(l))
+            f_out.write('* <span style="color:red">{}</span>\n'.format(
+                l.rstrip()))
         else:
             end = 0
             clean_l = l
@@ -175,8 +213,9 @@ def clean_all_descriptions(filename):
                 block = block.strip()
                 start = clean_l.find(block, end)
                 end = start + len(block)
-                clean_l = '{}<span style="color:red">{}</span>{}'.format(
+                clean_l = '{}<span style="color:blue">{}</span>{}'.format(
                     clean_l[:start], block, clean_l[end:])
+                end += len('<span style="color:blue"></span>')
             f_out.write('* {}'.format(clean_l))
     f_in.close()
     f_out.close()

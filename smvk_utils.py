@@ -75,7 +75,7 @@ def format_description_row(label, value, delimiter=','):
         delimiter.join(common.listify(value)))
 
 
-def description_cleaner(text):
+def description_cleaner(text, structured=False):
     """
     Attempt a cleanup of SMVK descriptions.
 
@@ -84,7 +84,11 @@ def description_cleaner(text):
     to get rid of them.
 
     Outsourced to the utils file because it is ugly.
+
+    :param structured: if internal structure should be kept to facilitate
+        diffs.
     """
+    delimiter = '¤'
     bad_endings = (  # anything found after one of these should be removed
         'W. Kaudern: I Celebes obygder',
         'W.Kaudern: I Celebes obygder.',
@@ -110,8 +114,9 @@ def description_cleaner(text):
         # 'Fotograf: '
     )
     bad_starts = (  # anything found before one of these should be removed
-        'Motiv [Gegenstand der Aufnahme]: ',
-        'Motiv/Gegenstand der Aufnahme: ',
+        'Motiv [Gegenstand der Aufnahme]:',
+        'Motiv [Gegenstand der Aufnahmne]:'
+        'Motiv/Gegenstand der Aufnahme:',
         'Motiv: '
     )
     # clean out any [...], there may be many
@@ -127,7 +132,22 @@ def description_cleaner(text):
         if text.find(test) >= 0:
             text = text[text.find(test) + len(test):]
 
-    return text
+    # remove blocks inside kept text
+    while text.find('[') >= 0:
+        start = text.find('[')
+        end = text.find(']', start)
+        if end < 0:
+            break
+        text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()
+
+    # merge removed blocks
+    while text.find(delimiter * 2) >= 0:
+        text = text.replace(delimiter * 2, delimiter)
+
+    if structured:
+        return text.split(delimiter)
+    else:
+        return text.replace(delimiter, ' ')
 
 
 def clean_all_descriptions(filename):
@@ -143,16 +163,20 @@ def clean_all_descriptions(filename):
     f_out = open('{}_clean{}'.format(base, ext), 'w')
 
     for l in f_in.readlines():
-        if not l.strip():
-            f_out.write(l)
+        if not l:
             continue
-        cleaned = description_cleaner(l).strip()
-        if not cleaned.strip():
+        cleaned = description_cleaner(l, structured=True)
+        if not any(block.strip() for block in cleaned):
             f_out.write('* {}'.format(l))
         else:
-            start = l.find(cleaned)
-            end = start + len(cleaned)
-            f_out.write('* {}<span style="color:red">{}</span>{}'.format(
-                l[:start], cleaned, l[end:]))
+            end = 0
+            clean_l = l
+            for block in cleaned:
+                block = block.strip()
+                start = clean_l.find(block, end)
+                end = start + len(block)
+                clean_l = '{}<span style="color:red">{}</span>{}'.format(
+                    clean_l[:start], block, clean_l[end:])
+            f_out.write('* {}'.format(clean_l))
     f_in.close()
     f_out.close()

@@ -71,7 +71,7 @@ def format_description_row(label, value, delimiter=','):
     """Format a single description line."""
     delimiter = '{} '.format(delimiter)
     return '<br/>\n{}: {}'.format(
-        helpers.italicize('label'),
+        helpers.italicize(label),
         delimiter.join(common.listify(value)))
 
 

@@ -82,7 +82,7 @@ class SMVKMappingUpdater(object):
         self.people_to_map = Counter()
         self.ethnic_to_map = Counter()
         self.places_to_map = OrderedDict()
-        self.keywords_to_map = OrderedDict()
+        self.keywords_to_map = Counter()
         self.expedition_to_match = set()
         self.external_to_parse = set()
 
@@ -128,8 +128,8 @@ class SMVKMappingUpdater(object):
         mk = make_keywords_list(
             mapping_root=self.settings.get('wiki_mapping_root'))
         intro_text = self.get_intro_text('keyword')
-        merged_keywords, preserved_keywords = mk.multi_table_mappings_merger(
-            self.keywords_to_map, update=True)
+        merged_keywords, preserved_keywords = mk.mappings_merger(
+            self.keywords_to_map.most_common(), update=True)
         mk.save_as_wikitext(merged_keywords, preserved_keywords, intro_text)
 
     def dump_ethnic(self):
@@ -172,17 +172,12 @@ class SMVKMappingUpdater(object):
                     image.get('ext_id'))
 
             # keywords - compare without case
-            keyword_columns = {
-                'motivord': 'motivord',
-                'sokord': 'sökord'
-            }
-            for col, label in keyword_columns.items():
-                if label not in self.keywords_to_map:
-                    self.keywords_to_map[label] = Counter()
+            keyword_columns = ('motivord', 'sokord')
+            for col in keyword_columns:
                 val = image.get(col) or []
                 val = utils.clean_uncertain(common.listify(val), keep=True)
                 val = [v.casefold() for v in val]
-                self.keywords_to_map[label].update(val)
+                self.keywords_to_map.update(val)
 
             # people
             people_columns = ('depicted_persons', 'photographer', 'creator')

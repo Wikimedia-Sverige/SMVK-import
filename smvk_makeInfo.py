@@ -22,7 +22,7 @@ import smvk_updateMappings as mapping_updater
 import smvk_utils as utils
 
 MAPPINGS_DIR = 'mappings'
-BATCH_CAT = 'Media_contributed_by_SMVK'  # stem for maintenance categories
+BATCH_CAT = 'Media contributed by SMVK'  # stem for maintenance categories
 BATCH_DATE = '2018-02'  # branch for this particular batch upload
 BASE_NAME = u'smvk_data'
 LOGFILE = 'smvk_processing.log'
@@ -141,7 +141,7 @@ class SMVKInfo(MakeBaseInfo):
         :param item: the metadata for the media file in question
         :return: str
         """
-        if item.is_photo:
+        if item.is_photo():
             return self.make_photograph_template(item)
         else:
             return self.make_artwork_info(item)
@@ -181,7 +181,30 @@ class SMVKInfo(MakeBaseInfo):
         :param item: the metadata for the media file in question
         :return: str
         """
-        raise NotImplementedError
+        template_name = 'Artwork'
+        template_data = OrderedDict()
+        template_data['artist'] = item.get_creator_name()
+        template_data['title'] = ''
+        template_data['date'] = item.date_text
+        template_data['description'] = item.get_description(with_depicted=True)
+        template_data['other_fields_2'] = item.get_original_description(
+            wrap=True)
+        template_data['medium'] = ''
+        template_data['dimensions'] = ''
+        template_data['institution'] = (
+            '{{Institution:Statens museer för världskultur}}')
+        template_data['department'] = item.get_museum()
+        template_data['location'] = ''
+        template_data['references'] = item.get_references()
+        template_data['object history'] = ''
+        template_data['credit line'] = ''
+        template_data['notes'] = item.get_notes()
+        template_data['accession number'] = item.get_id_link()
+        template_data['source'] = item.get_source()
+        template_data['permission'] = item.license_text
+        template_data['other_versions'] = ''
+
+        return helpers.output_block_template(template_name, template_data, 0)
 
     def generate_content_cats(self, item):
         """
@@ -361,16 +384,15 @@ class SMVKItem(object):
         """Remove meta info from description string."""
         desc = self.description_sv.strip()
         if not desc:
-            self.problems.append('There is no description!')
+            self.problems.append('There was no description')
             return
 
         desc = utils.description_cleaner(desc)
 
         # log problem if end result is empty
-        if not desc.strip('0123456789,.- '):
+        if not desc.strip('0123456789,.- ?'):
             self.problems.append(
-                'Nothing could be salvaged of the description: {}'.format(
-                    self.description_sv))
+                'Nothing could be salvaged of the description')
             return
 
         # strip whitespace and trailing , or .
@@ -400,8 +422,12 @@ class SMVKItem(object):
             txt += land
         return txt
 
-    def get_original_description(self):
-        """Given an item get an appropriate original description."""
+    def get_original_description(self, wrap=False):
+        """
+        Given an item get an appropriate original description.
+
+        :param wrap: whether to wrap the results in an {{Information field}}.
+        """
         txt = self.description_sv
         raw_geo = self.geo_data.get('raw')
         if any(raw_geo.values()):
@@ -430,12 +456,19 @@ class SMVKItem(object):
         if self.sokord:
             txt += utils.format_description_row('Sökord', self.sokord)
 
+        if wrap and txt:
+            return ('{{Information field'
+                    '|name={{original caption/i18n|header}}'
+                    '|value=%s}}' % txt)
         return txt
 
     def get_id_link(self):
         """Create the id link template."""
         if not self.is_photo():
-            raise NotImplementedError  # unclear what these links would be
+            # @todo: detect and handle objects which get a different prefix
+            #   may be that we want to rename is_photo or
+            #   separate photo, object, artwork
+            pass
         prefix = ''
         if self.museum in ('EM', 'VKM'):
             prefix = '|fotografi'
@@ -511,8 +544,9 @@ class SMVKItem(object):
                 [ethnicity.get('name') for ethnicity in ethnic_data]))
             qids = list(filter(None, [ethnicity.get('wikidata')
                                       for ethnicity in ethnic_data]))
-            en_desc += '{}. '.format(', '.join(
-                ['{{item|%s}}' % qid for qid in qids]))
+            if qids:
+                en_desc += '{}. '.format(', '.join(
+                    ['{{item|%s}}' % qid for qid in qids]))
 
         sv_desc += ('{}. '.format(self.get_geo_string())).lstrip(' .')
 
@@ -766,6 +800,8 @@ class SMVKItem(object):
                 match_on_first = True
                 found_testcat = False
                 for place_cats in self.geo_data.get('commonscats').values():
+                    if not place_cats:
+                        continue
                     found_testcat = any(
                         [self.try_cat_patterns(cat, place_cat, match_on_first)
                          for place_cat in place_cats])

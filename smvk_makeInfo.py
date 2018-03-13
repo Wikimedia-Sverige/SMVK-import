@@ -158,6 +158,8 @@ class SMVKInfo(MakeBaseInfo):
         template_data['photographer'] = item.get_creator_name()
         template_data['title'] = ''
         template_data['description'] = item.get_description()
+        template_data['original description info'] = (
+            '{{SMVK description/i18n}}')
         template_data['original description'] = item.get_original_description()
         template_data['depicted people'] = item.get_depicted_person()
         template_data['depicted place'] = item.get_depicted_place()
@@ -456,11 +458,9 @@ class SMVKItem(object):
         if self.sokord:
             txt += utils.format_description_row('Sökord', self.sokord)
 
-        if wrap and txt:
-            return ('{{Information field'
-                    '|name={{original caption/i18n|header}}'
-                    '|value=%s}}' % txt)
-        return txt
+        if wrap:
+            return '{{SMVK description|1=%s}}' % txt.strip()
+        return txt.strip()
 
     def get_id_link(self):
         """Create the id link template."""
@@ -520,13 +520,15 @@ class SMVKItem(object):
         :param strict: Whether to discard uncertain entries.
         """
         ethnic = self.ethnic or self.ethnic_old
+        data = []
         ethnicities = utils.clean_uncertain(ethnic, keep=not strict)
         if not ethnicities:
-            return []
-        return filter(
-            None,
-            [self.smvk_info.mappings.get('ethnic').get(ethnicity.casefold())
-             for ethnicity in ethnicities])
+            return data
+        mapping = self.smvk_info.mappings.get('ethnic')
+        for ethnicity in ethnicities:
+            data.append(mapping.get(ethnicity.casefold()) or
+                        {'name': ethnicity.casefold()})
+        return data
 
     def get_description(self, with_depicted=False):
         """
@@ -541,7 +543,7 @@ class SMVKItem(object):
         ethnic_data = self.get_ethnic_data(strict=False)
         if ethnic_data:
             sv_desc += '{}. '.format(', '.join(
-                [ethnicity.get('name') for ethnicity in ethnic_data]))
+                [ethnicity.get('name').title() for ethnicity in ethnic_data]))
             qids = list(filter(None, [ethnicity.get('wikidata')
                                       for ethnicity in ethnic_data]))
             if qids:
@@ -861,7 +863,7 @@ class SMVKItem(object):
             # Swedish. Cannot default to PD-anon-70 since date of first
             # publication is not known.
             self.problems.append(
-                'The creator is unknown so PD status cannot be verified.')
+                'The creator is unknown so PD status cannot be verified')
 
     # do not run self.date through util.clean_uncertain(),
     # helpers.std_data_range handles any comments

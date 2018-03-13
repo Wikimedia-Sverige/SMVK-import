@@ -1,14 +1,9 @@
-== To resolve ==
-* License per image/expedition (<license> now a mixture of {{PD-Sweden-photo}} and {{cc-zero}})
-* Only EM and VKM support archive links per below
-
 == Refuse upload ==
-* Images without <Fotograf>
+* Images without <Fotograf> where license is <PD>
 * Image without <Beskrivning>
 
 ==Fixed for this upload==
-<batch> = 2018-02
-<museum> = VKM
+<batch> = 2018-03
 <ext> = .tif
 
 == Filename ==

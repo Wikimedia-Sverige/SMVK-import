@@ -23,10 +23,17 @@ import smvk_utils as utils
 
 MAPPINGS_DIR = 'mappings'
 BATCH_CAT = 'Media contributed by SMVK'  # stem for maintenance categories
-BATCH_DATE = '2018-02'  # branch for this particular batch upload
+BATCH_DATE = '2018-03'  # branch for this particular batch upload
 BASE_NAME = u'smvk_data'
 LOGFILE = 'smvk_processing.log'
 GEO_ORDER = ('ort', 'region', 'depicted_places', 'land')
+GEO_LABELS = {
+    'ort': {'sv': 'ort', 'en': 'community'},
+    'region': {'sv': 'region', 'en': 'region'},
+    'depicted_places': {'sv': 'ursprungsplats', 'en': 'place of origin'},
+    'land': {'sv': 'land', 'en': 'country'},
+    'other_geo': {'sv': 'annan', 'en': 'other'},
+}
 DATA_FILE = 'smvk_data.csv'
 
 
@@ -436,8 +443,8 @@ class SMVKItem(object):
             places = []
             for k, v in raw_geo.items():
                 if v:
-                    # @todo: consider using other lables than plain geo_type
-                    places.append('{} ({})'.format(', '.join(v), k))
+                    places.append('{} ({})'.format(
+                        ', '.join(v), GEO_LABELS.get(k).get('sv')))
             txt += utils.format_description_row('Plats', places, delimiter=';')
         if self.depicted_persons:
             txt += utils.format_description_row(
@@ -601,9 +608,10 @@ class SMVKItem(object):
                     found_wd = True
                 else:
                     depicted_type.append(geo_entry.strip())
-            # @todo: consider using other lables than plain geo_type
+            clean_type = GEO_LABELS.get(geo_type).get('en')
             depicted.append('{val} ({key})'.format(
-                key=helpers.italicize(geo_type), val=', '.join(depicted_type)))
+                key=helpers.italicize(clean_type),
+                val=', '.join(depicted_type)))
             if found_wd:
                 break
 

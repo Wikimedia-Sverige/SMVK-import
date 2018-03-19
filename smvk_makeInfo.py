@@ -249,8 +249,8 @@ class SMVKInfo(MakeBaseInfo):
         # creator and event cats are classified as meta
         item.make_event_categories()
         creator_cats = item.get_creator_data().get('category', [])
-        for creator_cat in creator_cats:
-            cats.add(creator_cat)
+        if creator_cats:
+            cats.update(creator_cats)
 
         return list(cats)
 
@@ -751,7 +751,7 @@ class SMVKItem(object):
         for person in utils.clean_uncertain(self.depicted_persons, keep=True):
             person_data = self.get_person_data(person)
             if person_data.get('category'):
-                self.content_cats.add(person_data.get('category'))
+                self.content_cats.update(person_data.get('category'))
             formatted_people.append(
                 person_data.get('wikidata') or person_data.get('name'))
 

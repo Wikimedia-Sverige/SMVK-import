@@ -199,7 +199,7 @@ def clean_all_descriptions(filename):
             helpers.bolden('red')))
     f_out.write(intro)
 
-    for l in f_in.readlines():
+    for l in f_in:
         if not l.strip():
             f_out.write('* {}'.format(l))
         cleaned = description_cleaner(l, structured=True)

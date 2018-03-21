@@ -173,7 +173,7 @@ class SMVKInfo(MakeBaseInfo):
         template_data['date'] = item.date_text
         template_data['institution'] = (
             '{{Institution:Statens museer för världskultur}}')
-        template_data['department'] = item.get_museum()
+        template_data['department'] = item.get_museum_link()
         template_data['references'] = item.get_references()
         template_data['notes'] = item.get_notes()
         template_data['accession number'] = item.get_id_link()
@@ -202,7 +202,7 @@ class SMVKInfo(MakeBaseInfo):
         template_data['dimensions'] = ''
         template_data['institution'] = (
             '{{Institution:Statens museer för världskultur}}')
-        template_data['department'] = item.get_museum()
+        template_data['department'] = item.get_museum_link()
         template_data['location'] = ''
         template_data['references'] = item.get_references()
         template_data['object history'] = ''
@@ -225,6 +225,7 @@ class SMVKInfo(MakeBaseInfo):
         item.make_item_keyword_categories()
         item.make_ethnic_categories()
 
+        # @todo:should these count as content categories?
         # Add parish/municipality categorisation when needed
         if item.needs_place_cat:
             item.make_place_category()
@@ -247,7 +248,9 @@ class SMVKInfo(MakeBaseInfo):
             cats.add(self.make_maintenance_cat('needing categorisation'))
 
         # creator and event cats are classified as meta
-        item.make_event_categories()
+        event_cats = item.make_event_categories()
+        if event_cats:
+            cats.add(event_cats)
         creator_cats = item.get_creator_data().get('category', [])
         if creator_cats:
             cats.update(creator_cats)
@@ -486,16 +489,17 @@ class SMVKItem(object):
 
     def get_archive_id_link(self, card_data):
         """Create the id link template for an archive card."""
+        card_museum = card_data.get('museum')
         prefix = ''
-        if self.museum in ('EM', 'VKM'):
+        if card_museum in ('EM', 'VKM'):
             prefix = '|arkiv'
-        elif self.museum == 'OM':
+        elif card_museum == 'OM':
             raise NotImplementedError  # unclear if 'arkiv' or 'arkivdokument'
         return '{{SMVK-%s-link%s|%s|%s}}' % (
-            self.museum, prefix, card_data.get('db_id'),
+            card_museum, prefix, card_data.get('db_id'),
             card_data.get('label'))
 
-    def get_museum(self):
+    def get_museum_link(self):
         """Return the Wikidata linked museum."""
         qid = self.smvk_info.mappings.get('museums').get(self.museum)
         if not qid:
@@ -784,6 +788,7 @@ class SMVKItem(object):
         event_data = self.get_event_data()  # filter out uncertain entries
         if event_data:
             self.content_cats.add(event_data.get('cat'))
+        return event_data.get('cat')  # to allow access to these in make_meta
 
     def make_ethnic_categories(self):
         """Construct categories from the ethnicity data."""

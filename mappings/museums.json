@@ -1,6 +1,22 @@
 {
-  "EM": "Q1371375",
-  "MM": "Q1331646",
-  "VKM": "Q378377",
-  "OM": "Q298289"
+  "SMVK-EM": {
+    "item": "Q1371375",
+    "code": "EM",
+    "known_types": ["objekt", "arkiv", "fotografi", "delobjekt", "samling", "fotosamling", "exhibition", "showcase", "exhibitionpart", "digitaldocument", "video"]
+  },
+  "SMVK-MM": {
+    "item": "Q1331646",
+    "code": "MM",
+    "known_types": ["Egypt", "GreekRoman", "Cyprus", "Islam", "WestAsia", "Luristan", "Photograph"]
+  },
+  "SMVK-VKM": {
+    "item": "Q378377",
+    "code": "VKM",
+    "known_types": ["objekt", "arkiv", "fotografi", "samling"]
+  },
+  "SMVK-OM": {
+    "item": "Q298289",
+    "code": "OM",
+    "known_types": ["objekt", "arkiv", "delobjekt ", "arkivdokument", "Bildarkiv"]
+  }
 }

@@ -74,7 +74,7 @@ class SMVKMappingUpdater(object):
                          delimiter=self.settings.get('delimiter'),
                          list_delimiter=self.settings.get('list_delimiter'))
         # load archive card data to ensure formatting is still valid
-        load_archive_data(
+        archive_data = load_archive_data(
             self.settings.get('archive_file'),
             delimiter=self.settings.get('delimiter'),
             list_delimiter=self.settings.get('list_delimiter'))
@@ -84,9 +84,11 @@ class SMVKMappingUpdater(object):
         self.places_to_map = OrderedDict()
         self.keywords_to_map = Counter()
         self.expedition_to_match = set()
+        self.museum_to_match = set()
         self.external_to_parse = set()
 
         self.parse_data(data)
+        self.parse_archive_data(archive_data)
 
         # validate hard coded mappings
         for ext_id in self.external_to_parse:
@@ -95,6 +97,15 @@ class SMVKMappingUpdater(object):
             if expedition not in self.mappings.get('expeditions'):
                 pywikibot.warning(
                     '{} must be added to expeditions.json'.format(expedition))
+        museum_mapping = self.mappings.get('museums')
+        for museum, type in self.museum_to_match:
+            if museum not in museum_mapping:
+                pywikibot.warning(
+                    '{} must be added to museum.json'.format(museum))
+            elif type not in museum_mapping.get(museum).get('known_types'):
+                pywikibot.warning(
+                    'The "{}" type for {} must be added the Wikimedia link '
+                    'templates and to museum.json'.format(type, museum))
 
         self.dump_to_wikifiles()
 
@@ -150,23 +161,47 @@ class SMVKMappingUpdater(object):
             self.people_to_map.most_common(), update=True)
         mp.save_as_wikitext(merged_people, preserved_people, intro_text)
 
+    def check_for_unexpected_lists(self, data, label):
+        """
+        Ensure there aren't any unexpected lists.
+
+        :param data: a single image or archive card entry
+        :param label: label allowing the row to be identified in the csv
+        """
+        delimiter = self.settings.get('list_delimiter')
+        if any(delimiter in entry for entry in data.values()):
+            raise common.MyError(
+                '{}: One of the columns unexpectedly '
+                'contains a list\n{}'.format(
+                    label,
+                    '\n'.join(
+                        ['{}: {}'.format(k, v) for k, v in filter(
+                            lambda x: delimiter in x[1], data.items())]
+                    )))
+
+    def parse_archive_data(self, data):
+        """Go through the raw data breaking out data needing validating."""
+        for cards in data.values():
+            for card in cards:
+                self.check_for_unexpected_lists(card, card.get('photo_id'))
+
+                if card.get('museum_obj'):
+                    museum, _, type = card.get('museum_obj').partition('/')
+                    self.museum_to_match.add((museum, type))
+
     def parse_data(self, data):
         """Go through the raw data breaking out data needing mapping."""
         for key, image in data.items():
-            # ensure there are no surprise lists
-            if any(self.settings.get('list_delimiter') in entry
-                   for entry in image.values()):
-                raise common.MyError(
-                    'One of the columns unexpectedly contains a list\n'
-                    '\n'.join(
-                        ['{}: {}'.format(k, v) for k, v in image.items()]
-                    ))
+            self.check_for_unexpected_lists(image, image.get('photo_id'))
 
             if image.get('event'):
                 self.expedition_to_match.update(
                     utils.clean_uncertain(
                         common.listify(image.get('event')),
                         keep=True))
+            if image.get('museum_obj'):
+                museum, _, type = image.get('museum_obj').partition('/')
+                self.museum_to_match.add((museum, type))
             if image.get('ext_id'):
                 self.external_to_parse.update(
                     image.get('ext_id'))
@@ -238,10 +273,11 @@ def load_data(csv_file, delimiter=None, list_delimiter=None):
         ('Postnr.', 'db_id'),
         ('Objekt, externt / samma som', 'ext_id'),
         ('Etn, tidigare', 'ethnic_old'),
-        ('Referens / källa', 'reference_source'),
+        ('Land, ursprung/brukad', 'depicted_land'),
         ('Region/Ort, ursprung', 'depicted_places'),
+        ('Referens / källa', 'reference_source'),
         ('Media/Licens', 'license'),
-        ('Museum', 'museum')
+        ('Museum/objekt', 'museum_obj')
     ])
 
     expected_header = delimiter.join(fields.keys())
@@ -249,7 +285,7 @@ def load_data(csv_file, delimiter=None, list_delimiter=None):
         'Motivord', 'Sökord', 'Etnisk grupp', 'Personnamn, avbildad',
         'Region, fotograferad i', 'Ort, fotograferad i',
         'Geografiskt namn, annat', 'Fotodatum', 'Objekt, externt / samma som',
-        'Region/Ort, ursprung')
+        'Region/Ort, ursprung', 'Referens / Publicerad i')
     raw_dict = csv_methods.csv_file_to_dict(
         csv_file, 'Fotonummer', expected_header, lists=list_columns,
         delimiter=delimiter,
@@ -274,8 +310,8 @@ def load_archive_data(csv_file, delimiter=None, list_delimiter=None):
     fields = OrderedDict([
         ('Id', 'label'),
         ('Postnr', 'db_id'),
-        ('Fotonummer', 'photo_id'),
-        ('Museum', 'museum')])
+        ('Museum/objekt', 'museum_obj'),
+        ('Fotonummer', 'photo_id')])
 
     expected_header = delimiter.join(fields.keys())
     list_columns = ('Fotonummer', )

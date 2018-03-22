@@ -451,7 +451,9 @@ class SMVKItem(object):
         if geo or land:
             txt += '. {}'.format(', '.join(geo))
             if geo and land:
-                txt += '; '
+                if land in txt:  # avoid duplicated info
+                    return txt
+                txt += '. '
             txt += land
         return txt
 
@@ -512,14 +514,15 @@ class SMVKItem(object):
         return '{{item|%s}}' % qid
 
     def get_source(self):
-        """Produce a linked source statement."""
+        """
+        Produce a linked source statement.
+
+        Does not include the original filename as multiple versions of the
+        file exists and these may have been relabled before delivery.
+        """
         mapping = self.smvk_info.mappings.get('museums')
         museum_code = mapping.get(self.museum).get('code')
-        filename = '{}.tif'.format(self.photo_id)
-        template = '{{SMVK cooperation project|museum=%s}}' % museum_code
-        return ('The original image file was received from SMVK with the '
-                'following filename: {filename}\n{template}'.format(
-                    filename=filename, template=template))
+        return '{{SMVK cooperation project|museum=%s}}' % museum_code
 
     def get_event_data(self, strict=True):
         """

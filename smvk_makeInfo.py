@@ -196,9 +196,9 @@ class SMVKInfo(MakeBaseInfo):
         template_data['artist'] = item.get_creator_name()
         template_data['title'] = ''
         template_data['date'] = item.date_text
-        template_data['description'] = item.get_description(with_depicted=True)
-        template_data['other_fields_2'] = item.get_original_description(
+        template_data['other_fields_1'] = item.get_original_description(
             wrap=True)
+        template_data['description'] = item.get_description(with_depicted=True)
         template_data['medium'] = ''
         template_data['dimensions'] = ''
         template_data['institution'] = (

@@ -231,13 +231,19 @@ class SMVKMappingUpdater(object):
                 self.ethnic_to_map.update(val)
 
             # places
-            place_columns = ('land', 'region', 'ort', 'depicted_places')
+            place_columns = (
+                'land', 'region', 'ort', 'depicted_places',
+                ('depicted_land', 'land'))  # depicted_land merged with land
             for col in place_columns:
-                if col not in self.places_to_map:
-                    self.places_to_map[col] = Counter()
+                key = col
+                if isinstance(col, tuple):
+                    key = col[1]
+                    col = col[0]
+                if key not in self.places_to_map:
+                    self.places_to_map[key] = Counter()
                 val = image.get(col) or []
                 val = utils.clean_uncertain(common.listify(val), keep=True)
-                self.places_to_map[col].update(val)
+                self.places_to_map[key].update(val)
 
 
 def load_data(csv_file, delimiter=None, list_delimiter=None):

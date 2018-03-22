@@ -226,8 +226,7 @@ class SMVKInfo(MakeBaseInfo):
         item.make_item_keyword_categories()
         item.make_ethnic_categories()
 
-        # @todo:should these count as content categories?
-        # Add parish/municipality categorisation when needed
+        # Add geo categorisation when needed
         if item.needs_place_cat:
             item.make_place_category()
 

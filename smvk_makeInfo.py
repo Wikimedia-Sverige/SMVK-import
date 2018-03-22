@@ -654,7 +654,9 @@ class SMVKItem(object):
             wikidata_type = {}
             commonscats_type = []
             labels_type = []
-            geo_entries_raw = common.listify(getattr(self, geo_type))
+            geo_entries_raw = []
+            if getattr(self, geo_type):  # country otherwise makes ['']
+                geo_entries_raw = common.listify(getattr(self, geo_type))
             geo_entries = utils.clean_uncertain(geo_entries_raw)
             for geo_entry in geo_entries:
                 label = geo_entry.strip()

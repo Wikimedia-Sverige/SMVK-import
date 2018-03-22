@@ -257,6 +257,22 @@ class SMVKInfo(MakeBaseInfo):
 
         return list(cats)
 
+    def build_link_template(self, museum_obj, id, label):
+        """
+        Construct an SMVK link template.
+
+        :param museum_obj: a museum/type string
+        :param id: unique db id
+        :param label: the text to display
+        """
+        museum, _, type = museum_obj.partition('/')
+        prefix = ''
+        if museum != 'SMVK-MM':  # MM has prefix as part of id
+            prefix = '|{}'.format(type)
+        return '{{SMVK-%s-link%s|%s|%s}}' % (
+            self.mappings.get('museums').get(museum).get('code'),
+            prefix, id, label)
+
     def get_original_filename(self, item):
         """Return the original image filename without file extension."""
         return item.photo_id
@@ -376,6 +392,7 @@ class SMVKItem(object):
         self.commons = smvk_info.commons
         self.archive_cards = archive_data
         self.geo_data = self.get_geo_data()
+        self.museum = self.museum_obj.split('/')[0]
 
         # called at init to check for blockers or prevent multiple runs
         self.date_text = self.get_date_text()
@@ -474,43 +491,28 @@ class SMVKItem(object):
 
     def get_id_link(self):
         """Create the id link template."""
-        if not self.is_photo():
-            # @todo: detect and handle objects which get a different prefix
-            #   may be that we want to rename is_photo or
-            #   separate photo, object, artwork
-            pass
-        prefix = ''
-        if self.museum in ('EM', 'VKM'):
-            prefix = '|fotografi'
-        elif self.museum == 'OM':
-            prefix = '|bildarkiv'
-        return '{{SMVK-%s-link%s|%s|%s}}' % (
-            self.museum, prefix, self.db_id, self.photo_id)
+        return self.smvk_info.build_link_template(
+            self.museum_obj, self.db_id, self.photo_id)
 
     def get_archive_id_link(self, card_data):
         """Create the id link template for an archive card."""
-        card_museum = card_data.get('museum')
-        prefix = ''
-        if card_museum in ('EM', 'VKM'):
-            prefix = '|arkiv'
-        elif card_museum == 'OM':
-            raise NotImplementedError  # unclear if 'arkiv' or 'arkivdokument'
-        return '{{SMVK-%s-link%s|%s|%s}}' % (
-            card_museum, prefix, card_data.get('db_id'),
+        return self.smvk_info.build_link_template(
+            card_data.get('museum_obj'),
+            card_data.get('db_id'),
             card_data.get('label'))
 
     def get_museum_link(self):
         """Return the Wikidata linked museum."""
-        qid = self.smvk_info.mappings.get('museums').get(self.museum)
-        if not qid:
-            raise common.MyError(
-                '"{}" is an unmatched museum.'.format(self.museum))
+        mapping = self.smvk_info.mappings.get('museums')
+        qid = mapping.get(self.museum).get('item')
         return '{{item|%s}}' % qid
 
     def get_source(self):
         """Produce a linked source statement."""
+        mapping = self.smvk_info.mappings.get('museums')
+        museum_code = mapping.get(self.museum).get('code')
         filename = '{}.tif'.format(self.photo_id)
-        template = '{{SMVK cooperation project|museum=%s}}' % self.museum
+        template = '{{SMVK cooperation project|museum=%s}}' % museum_code
         return ('The original image file was received from SMVK with the '
                 'following filename: {filename}\n{template}'.format(
                     filename=filename, template=template))
@@ -686,7 +688,7 @@ class SMVKItem(object):
         if self.reference_source:
             refs.add(self.reference_source)
         if self.reference_published:
-            refs.add(self.reference_published)
+            refs.update(self.reference_published)  # list
         if len(refs) == 1:
             return refs.pop()
         return '* {}'.format('\n* '.join(refs)).strip().rstrip('*')
@@ -840,13 +842,13 @@ class SMVKItem(object):
 
     def get_license_text(self):
         """Format a license template."""
-        if self.license not in ('PD', 'Zero'):
+        if self.license not in ('PD', 'cc0'):
             raise common.MyError(
                 'A non-supported license was encountered: {}'.format(
                     self.license))
 
         # CC0 is straight forward
-        if self.license == 'Zero':
+        if self.license == 'cc0':
             return '{{CC0}}'
 
         # PD - identify creator and image type (photo/artwork)

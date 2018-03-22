@@ -26,11 +26,12 @@ BATCH_CAT = 'Media contributed by SMVK'  # stem for maintenance categories
 BATCH_DATE = '2018-03'  # branch for this particular batch upload
 BASE_NAME = u'smvk_data'
 LOGFILE = 'smvk_processing.log'
-GEO_ORDER = ('ort', 'region', 'depicted_places', 'land')
+GEO_ORDER = ('ort', 'region', 'depicted_places', 'land', 'depicted_land')
 GEO_LABELS = {
     'ort': {'sv': 'ort', 'en': 'community'},
     'region': {'sv': 'region', 'en': 'region'},
     'depicted_places': {'sv': 'ursprungsplats', 'en': 'place of origin'},
+    'depicted_land': {'sv': 'ursprungsland', 'en': 'country of origin'},
     'land': {'sv': 'land', 'en': 'country'},
     'other_geo': {'sv': 'annan', 'en': 'other'},
 }
@@ -443,7 +444,10 @@ class SMVKItem(object):
             utils.clean_uncertain(self.depicted_places) or
             utils.clean_uncertain(self.other_geo)
         )
-        land = utils.clean_uncertain(self.land)
+        land = (
+            utils.clean_uncertain(self.land) or
+            utils.clean_uncertain(self.depicted_land)
+        )
         if geo or land:
             txt += '. {}'.format(', '.join(geo))
             if geo and land:
@@ -666,7 +670,7 @@ class SMVKItem(object):
             labels[geo_type] = labels_type
             raw[geo_type] = geo_entries_raw
 
-        # assume country is always mapped
+        # assume country is always mapped and either land OR depicted land used
         if len(list(filter(None, commonscats.values()))) <= 1:
             # just knowing country is pretty bad
             self.meta_cats.add('needing categorisation (place)')

@@ -581,7 +581,9 @@ class SMVKItem(object):
             en_desc += '{}{}. '.format(event_data.get('en'),
                                        ' (probably)' if uncertain else '')
 
-        desc = '{{sv|%s}}\n{{en|%s}}' % (sv_desc, en_desc)
+        desc = '{{sv|%s}}' % sv_desc
+        if en_desc:
+            desc += '\n{{en|%s}}' % en_desc
         if with_depicted:
             desc += '\n{}'.format(self.get_depicted_place(wrap=True))
 

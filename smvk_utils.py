@@ -139,6 +139,7 @@ def description_cleaner(text, structured=False):
         '(Katalogkort)',
         '(katalogkort)',
         '(glasplåt)',
+        '(?)'
     )
     # clean out any Datum: ... . but beware of . in abbrev.
     # clean out any Ort: ... . but beware of . in abbrev.
@@ -166,10 +167,17 @@ def description_cleaner(text, structured=False):
             break
         text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()
 
-    # merge removed blocks and ignore any at the ends
-    while text.find(delimiter * 2) >= 0:
-        text = text.replace(delimiter * 2, delimiter)
+    # remove repeats, also merges any removed blocks
+    repeats = (',', '.', ' ', delimiter)
+    for character in repeats:
+        while text.find(character * 2) > 0:
+            text = text.replace(character * 2, character)
+    # ignore any removed block in the end
     text = text.strip(delimiter)
+
+    # special case
+    while text.find('.,') > 0:
+        text = text.replace('.,', '.')
 
     if structured:
         return text.split(delimiter)

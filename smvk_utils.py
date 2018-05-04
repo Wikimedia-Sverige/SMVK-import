@@ -11,9 +11,21 @@ def parse_external_ids(ext_id):
     """Match an external id to a Commons formating template."""
     if ext_id.startswith('gnm/'):
         return gnm_parser(ext_id)
+    elif ext_id.startswith('SMVK'):  # same image in use in a sister collection
+        return smvk_parser(ext_id)
 
     # if not caught by any of the above
     pywikibot.warning('{} is not a recognized external id'.format(ext_id))
+
+
+def smvk_parser(ext_id):
+    """Parser for SMVK identifiers."""
+    # Not as sensitive as build_link_template nor is it validated
+    museum, type, id = ext_id.split('/', 2)
+    prefix = ''
+    if museum != 'SMVK-MM':  # MM has prefix as part of id
+        prefix = '|{}'.format(type)
+    return '{{%s-link%s|%s}}' % (museum, prefix, id)
 
 
 def gnm_parser(ext_id):

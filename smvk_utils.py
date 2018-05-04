@@ -107,11 +107,18 @@ def description_cleaner(text, structured=False):
         'Publ. W. Kaudern',
         'Publ. W.Kaudern',
         'Publ. Kandun',
+        'Publ. Nordenskiöld:',
+        'Publ.: ',
+        'publicera: ',
+        'Publicerad: ',
         'Se Kaudern: ',
         'Se Walter Kaudern:',
         'Se W. Kaudern:',
         'Se W.Kaudern:',
         'Se Linell & Kaudern:',
+        'Se Nordenskiöld:',
+        'Se Erland Nordenskiöld:',
+        'Jämför Nordenskiöld:',
         'Walter Kaudern: I Celebes obygder',
         'W. Kaudern: I Celebes obygder',
         'W.Kaudern: I Celebes obygder.',
@@ -119,10 +126,13 @@ def description_cleaner(text, structured=False):
         'W. Kaudern: Ethnographical Stud',
         'W. Kaudern: Structures and settlements',
         'W. Kaudern: På Madagaskar.',
+        'Nordeskiiöld: Indianerna på Panamanäset',
         'Jfr. bildark',
         'Jfr. bildnr.',
         'Jfr. bindnr.',
         'Jfr. bild',
+        'Jfr bild',
+        'Jämför bild',
         'Bildark: ',
         'Erh: gm köp av',
         'Erh: gm. köp av',
@@ -132,11 +142,15 @@ def description_cleaner(text, structured=False):
         'erhållen gm. köp av',
         'Erhållet genom köp av',
         'Bilden erhållen genom köp av',
+        'Foto erhållet av ',
+        'Fotot erhållit ',
         'Neg.: ',
         # 'Negnr',
         # 'Neg.nr',
         'Foto av: ',
-        # 'Fotograf: '
+        'Foto taget av ',
+        # 'Fotograf: ',
+        'Först. eft.'
     )
     bad_starts = (  # anything found before one of these should be removed
         'Motiv [Gegenstand der Aufnahme]:',
@@ -150,7 +164,9 @@ def description_cleaner(text, structured=False):
         '(negativpåse)',
         '(Katalogkort)',
         '(katalogkort)',
+        '(Katolkort)',
         '(glasplåt)',
+        '(general katalog)'
         '(?)'
     )
     # clean out any Datum: ... . but beware of . in abbrev.

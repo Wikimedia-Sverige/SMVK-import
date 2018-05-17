@@ -473,13 +473,10 @@ def handle_args(args, usage):
     :return: dict of options
     """
     options = {}
-    expected_args = ('mapping_log_file', 'data_file', 'archive_file',
-                     'mappings_dir', 'delimiter', 'list_delimiter',
-                     'wiki_mapping_root', 'default_intro_text')
 
     for arg in pywikibot.handle_args(args):
         option, sep, value = arg.partition(':')
-        if option.startswith('-') and option[1:] in expected_args:
+        if option.startswith('-') and option[1:] in DEFAULT_OPTIONS.keys():
             options[option[1:]] = common.convert_from_commandline(value)
         else:
             pywikibot.output(usage)

@@ -39,7 +39,7 @@ DATA_FILE = 'smvk_data.csv'
 
 
 class SMVKInfo(MakeBaseInfo):
-    """Construct descriptions + filenames for a Nordic Museum batch upload."""
+    """Construct descriptions + filenames for a SMVK batch upload."""
 
     def __init__(self, **options):
         """Initialise a make_info object."""

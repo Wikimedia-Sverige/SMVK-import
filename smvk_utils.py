@@ -44,6 +44,12 @@ def relabel_inner_dicts(obj, key_map):
     return obj
 
 
+def invert_dict(old_dict):
+    """Invert a dict where each value is itself hashable."""
+    # note that OrderedDict gets converted to dict
+    return {v: k for k, v in old_dict.items()}
+
+
 def clean_uncertain(value, keep=False):
     """
     Handle uncertain values in the data.

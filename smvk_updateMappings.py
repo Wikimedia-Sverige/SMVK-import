@@ -92,7 +92,7 @@ class SMVKMappingUpdater(object):
 
         # validate hard coded mappings
         for ext_id in self.external_to_parse:
-            utils.parse_external_ids(ext_id)
+            utils.parse_external_id(ext_id)
         for expedition in self.expedition_to_match:
             if expedition not in self.mappings.get('expeditions'):
                 pywikibot.warning(
@@ -202,9 +202,9 @@ class SMVKMappingUpdater(object):
             if image.get('museum_obj'):
                 museum, _, type = image.get('museum_obj').partition('/')
                 self.museum_to_match.add((museum, type))
-            if image.get('ext_id'):
+            if image.get('ext_ids'):
                 self.external_to_parse.update(
-                    image.get('ext_id'))
+                    image.get('ext_ids'))
 
             # keywords - compare without case
             keyword_columns = ('motivord', 'sokord')
@@ -277,7 +277,7 @@ def load_data(csv_file, delimiter=None, list_delimiter=None):
         ('Beskrivning, engelska', 'description_en'),
         ('Referens / Publicerad i', 'reference_published'),
         ('Postnr.', 'db_id'),
-        ('Objekt, externt / samma som', 'ext_id'),
+        ('Objekt, externt / samma som', 'ext_ids'),
         ('Etn, tidigare', 'ethnic_old'),
         ('Land, ursprung/brukad', 'depicted_land'),
         ('Region/Ort, ursprung', 'depicted_places'),

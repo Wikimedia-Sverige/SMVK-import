@@ -7,7 +7,7 @@ import batchupload.common as common
 import batchupload.helpers as helpers
 
 
-def parse_external_ids(ext_id):
+def parse_external_id(ext_id):
     """Match an external id to a Commons formating template."""
     if ext_id.startswith('gnm/'):
         return gnm_parser(ext_id)

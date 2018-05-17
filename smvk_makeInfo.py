@@ -922,10 +922,10 @@ class SMVKItem(object):
             txt += 'Related archive card(s): {}'.format(
                 ', '.join([self.get_archive_id_link(card)
                            for card in self.archive_cards]))
-        if self.ext_id:
+        if self.ext_ids:
             txt += '\nId in other archives: {}'.format(
-                ', '.join([utils.parse_external_ids(id)
-                           for id in self.ext_id]))
+                ', '.join([utils.parse_external_id(id)
+                           for id in self.ext_ids]))
         return txt
 
 

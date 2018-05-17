@@ -183,7 +183,7 @@ class SMVKMappingUpdater(object):
         """Go through the raw data breaking out data needing validating."""
         for cards in data.values():
             for card in cards:
-                self.check_for_unexpected_lists(card, card.get('photo_id'))
+                self.check_for_unexpected_lists(card, card.get('photo_ids'))
 
                 if card.get('museum_obj'):
                     museum, _, type = card.get('museum_obj').partition('/')
@@ -317,7 +317,7 @@ def load_archive_data(csv_file, delimiter=None, list_delimiter=None):
         ('Id', 'label'),
         ('Postnr', 'db_id'),
         ('Museum/objekt', 'museum_obj'),
-        ('Fotonummer', 'photo_id')])
+        ('Fotonummer', 'photo_ids')])
 
     expected_header = delimiter.join(fields.keys())
     list_columns = ('Fotonummer', )
@@ -330,7 +330,7 @@ def load_archive_data(csv_file, delimiter=None, list_delimiter=None):
     # re-order so photo_id is main key
     photo_id_dict = {}
     for k, v in relabeled_dict.items():
-        for photo_id in v.get('photo_id'):
+        for photo_id in v.get('photo_ids'):
             if photo_id not in photo_id_dict:
                 photo_id_dict[photo_id] = []
             photo_id_dict[photo_id].append(v)

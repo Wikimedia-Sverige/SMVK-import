@@ -64,9 +64,9 @@ def main_metadata():
     list_columns = (
         'Motivord', 'Sökord', 'Etnisk grupp', 'Personnamn, avbildad',
         'Region, fotograferad i', 'Ort, fotograferad i',
-        'Geografiskt namn, annat', 'Fotodatum',
+        'Geografiskt namn, annat', 'Land, Fotograferad', 'Fotodatum',
         'Objekt, externt / samma som', 'Region/Ort, ursprung',
-        'Referens / Publicerad i')
+        'Referens / Publicerad i', 'Referens / källa')
     key_column = 'Fotonummer'
 
     return columns, list_columns, key_column

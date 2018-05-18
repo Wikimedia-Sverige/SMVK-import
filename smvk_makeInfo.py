@@ -20,6 +20,7 @@ from batchupload.make_info import MakeBaseInfo
 
 import smvk_updateMappings as mapping_updater
 import smvk_utils as utils
+from csvParser import CsvParser
 
 MAPPINGS_DIR = 'mappings'
 BATCH_CAT = 'Media contributed by SMVK'  # stem for maintenance categories
@@ -35,6 +36,7 @@ GEO_LABELS = {
     'land': {'sv': 'land', 'en': 'country'},
     'other_geo': {'sv': 'annan', 'en': 'other'},
 }
+GEO_COUNTRIES = ('land', 'depicted_land')
 DATA_FILE = 'smvk_data.csv'
 
 
@@ -65,8 +67,9 @@ class SMVKInfo(MakeBaseInfo):
         :param in_file: a tuple of paths to the metadata files
         :return: dict
         """
-        main_data = mapping_updater.load_data(in_file[0])
-        archive_data = mapping_updater.load_archive_data(in_file[1])
+        parser = CsvParser()  # @todo: support options
+        main_data = parser.load_data(in_file[0])
+        archive_data = parser.load_archive_data(in_file[1])
         return {'main': main_data, 'archive': archive_data}
 
     def load_mappings(self, update_mappings):
@@ -449,11 +452,12 @@ class SMVKItem(object):
         )
         if geo or land:
             txt += '. {}'.format(', '.join(geo))
+            land_text = '-'.join(common.listify(land))
             if geo and land:
-                if land in txt:  # avoid duplicated info
+                if land_text in txt:  # avoid duplicated info
                     return txt
                 txt += '. '
-            txt += land
+            txt += land_text
         return txt
 
     def get_original_description(self, wrap=False):
@@ -676,8 +680,13 @@ class SMVKItem(object):
             labels[geo_type] = labels_type
             raw[geo_type] = geo_entries_raw
 
-        # assume country is always mapped and either land OR depicted land used
-        if len(list(filter(None, commonscats.values()))) <= 1:
+        # assume country is always mapped and either land OR depicted_land used
+        countries = next(
+            (getattr(self, key) for key in GEO_COUNTRIES
+             if getattr(self, key)),
+            [])
+        num_countries = len(common.listify(countries))
+        if len(list(filter(None, commonscats.values()))) <= num_countries:
             # just knowing country is pretty bad
             self.meta_cats.add('needing categorisation (place)')
 
@@ -696,7 +705,7 @@ class SMVKItem(object):
         """Return a combination of the two reference types."""
         refs = set()
         if self.reference_source:
-            refs.add(self.reference_source)
+            refs.update(self.reference_source)  # list
         if self.reference_published:
             refs.update(self.reference_published)  # list
         if len(refs) == 1:

@@ -36,6 +36,7 @@ def gnm_parser(ext_id):
     return '{{GNM-link|%s}}' % ext_id[len('gnm/photo/GNM'):]
 
 
+# consider movingto BatchUploadTools.common
 def relabel_inner_dicts(obj, key_map):
     """Update the keys of all dicts in a dict."""
     for inner in obj.values():

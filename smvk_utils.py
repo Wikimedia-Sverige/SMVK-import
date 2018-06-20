@@ -153,12 +153,12 @@ def description_cleaner(text, structured=False):
         if text.find(test) >= 0:
             text = text[text.find(test) + len(test):]
 
-    # remove blocks inside kept text
+    # remove these blocks from inside kept text
     for test in cleaner_patterns.get('middle'):
         while text.find(test) >= 0:
             start = text.find(test)
             end = start + len(test)
-            text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()
+            text = text[:start].rstrip() + delimiter + text[end:].lstrip()
 
     # clean out any [...], there may be many
     while text.find('[') >= 0:
@@ -184,6 +184,9 @@ def description_cleaner(text, structured=False):
     if structured:
         return text.split(delimiter)
     else:
+        no_space_before = (',', '.', ':', ';')
+        for char in no_space_before:
+            text = text.replace(delimiter + char, char)
         return text.replace(delimiter, ' ')
 
 

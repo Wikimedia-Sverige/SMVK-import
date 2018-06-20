@@ -25,7 +25,7 @@ from csvParser import CsvParser
 MAPPINGS_DIR = 'mappings'
 BATCH_CAT = 'Media contributed by SMVK'  # stem for maintenance categories
 BATCH_DATE = '2018-03'  # branch for this particular batch upload
-BASE_NAME = u'smvk_data'
+BASE_NAME = 'smvk_data'
 LOGFILE = 'smvk_processing.log'
 GEO_ORDER = ('ort', 'region', 'depicted_places', 'land', 'depicted_land')
 GEO_LABELS = {
@@ -37,7 +37,6 @@ GEO_LABELS = {
     'other_geo': {'sv': 'annan', 'en': 'other'},
 }
 GEO_COUNTRIES = ('land', 'depicted_land')
-DATA_FILE = 'smvk_data.csv'
 
 
 class SMVKInfo(MakeBaseInfo):
@@ -326,9 +325,9 @@ class SMVKInfo(MakeBaseInfo):
 
         for arg in pywikibot.handle_args(args):
             option, sep, value = arg.partition(':')
-            if option == '-data_file':
-                smvk_options['data_file'] = common.convert_from_commandline(
-                    value)
+            if option == '-metadata_file':
+                smvk_options['metadata_file'] = \
+                    common.convert_from_commandline(value)
             elif option == '-archive_file':
                 smvk_options['archive_file'] = common.convert_from_commandline(
                     value)
@@ -342,11 +341,11 @@ class SMVKInfo(MakeBaseInfo):
             elif option == '-batch_label':
                 options['batch_label'] = common.convert_from_commandline(value)
 
-        if smvk_options['data_file'] and smvk_options['archive_file']:
+        if smvk_options['metadata_file'] and smvk_options['archive_file']:
             options['in_file'] = \
-                (smvk_options['data_file'], smvk_options['archive_file'])
+                (smvk_options['metadata_file'], smvk_options['archive_file'])
             options['base_name'] = options.get('base_name') or path.join(
-                path.split(smvk_options['data_file'])[0],
+                path.split(smvk_options['metadata_file'])[0],
                 BASE_NAME)
         # main handles the case of missing in_files
 
@@ -359,7 +358,7 @@ class SMVKInfo(MakeBaseInfo):
             'Usage:'
             '\tpython smvk_makeInfo.py -metadata_file:PATH -archive_file:PATH '
             '-dir:PATH\n'
-            '\t-data_file:PATH path to main metadata file\n'
+            '\t-metadata_file:PATH path to main metadata file\n'
             '\t-archive_file:PATH path to archive card metadata file\n'
             '\t-base_name:STR base name to use for output files\n'
             '\t-dir:PATH specifies the path to the directory containing a '
@@ -483,10 +482,10 @@ class SMVKItem(object):
             if self.ethnic:
                 ethnicities.append(', '.join(self.ethnic))
             if self.ethnic_old:
-                ethnic_old = ', '.join(self.ethnic_old)
                 if ethnicities:
-                    ethnic_old += ' (tidigare)'
-                ethnicities.append(ethnic_old)
+                    ethnicities.append('{} (tidigare)'.format(self.ethnic_old))
+                else:
+                    ethnicities.append(self.ethnic_old)
             txt += utils.format_description_row(
                 'Etnisk grupp', ethnicities, delimiter=';')
         if self.motivord:
@@ -542,7 +541,7 @@ class SMVKItem(object):
 
         :param strict: Whether to discard uncertain entries.
         """
-        ethnic = self.ethnic or self.ethnic_old
+        ethnic = self.ethnic or common.listify(self.ethnic_old)
         data = []
         ethnicities = utils.clean_uncertain(ethnic, keep=not strict)
         if not ethnicities:
@@ -781,7 +780,7 @@ class SMVKItem(object):
                 person_data.get('wikidata') or person_data.get('name'))
 
         style = '|style=information field' if wrap else ''
-        return u'{{depicted person|%s%s}} ' % (
+        return '{{depicted person|%s%s}} ' % (
             '|'.join(formatted_people), style)
 
     def make_place_category(self):

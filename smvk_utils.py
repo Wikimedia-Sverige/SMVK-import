@@ -94,6 +94,30 @@ def format_description_row(label, value, delimiter=','):
         delimiter.join(common.listify(value)))
 
 
+def replace_repeat_character(text, char_1, target, delimiter, char_2=None):
+    """
+    Replace two characters by a single one.
+
+    Replaces them even if separated by space or delimiter. Also merges any
+    adjacent delimiters.
+
+    If char_2 is not provided then it is assumed that char_1 is repeated
+    """
+    char_2 = char_2 or char_1
+    patterns = (
+        char_1 + char_2,
+        char_1 + delimiter + char_2,
+        char_1 + ' ' + char_2)
+
+    text = text.replace(delimiter * 2, delimiter)
+    while any(text.find(pattern) > 0 for pattern in patterns):
+        for pattern in patterns:
+            text = text.replace(pattern, target + delimiter)
+        text = text.replace(delimiter + ' ', delimiter)
+        text = text.replace(delimiter * 2, delimiter)
+    return text
+
+
 def description_cleaner(text, structured=False):
     """
     Attempt a cleanup of SMVK descriptions.
@@ -202,17 +226,18 @@ def description_cleaner(text, structured=False):
             break
         text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()
 
-    # remove repeats, also merges any removed blocks
-    repeats = (',', '.', ' ', delimiter)
-    for character in repeats:
-        while text.find(character * 2) > 0:
-            text = text.replace(character * 2, character)
+    # remove repeats, even if interspersed with delimiters
+    repeats = (' ', ',', '.')
+    for char in repeats:
+        text = replace_repeat_character(text, char, char, delimiter)
+    # special case .,
+    text = replace_repeat_character(text, '.', '.', delimiter, char_2=',')
+
+    # merge any remaining removed blocks
+    while text.find(delimiter * 2) > 0:
+        text = text.replace(delimiter * 2, delimiter)
     # ignore any removed block in the end
     text = text.strip(delimiter)
-
-    # special case
-    while text.find('.,') > 0:
-        text = text.replace('.,', '.')
 
     if structured:
         return text.split(delimiter)
@@ -245,6 +270,7 @@ def clean_all_descriptions(filename):
     for l in f_in:
         if not l.strip():
             f_out.write('* {}'.format(l))
+            continue
         cleaned = description_cleaner(l, structured=True)
         if not any(block.strip() for block in cleaned):
             f_out.write('* <span style="color:red">{}</span>\n'.format(

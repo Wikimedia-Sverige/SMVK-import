@@ -6,6 +6,16 @@ import pywikibot
 import batchupload.common as common
 import batchupload.helpers as helpers
 
+cleaner_pattern = None  # to avoid repeated loads
+
+
+def load_cleaner_patterns(filename='cleaner_patterns.json'):
+    """Load the cleaner patterns file if needed."""
+    global cleaner_pattern
+    if not cleaner_pattern:
+        cleaner_pattern = common.open_and_read_file(filename, as_json=True)
+    return cleaner_pattern
+
 
 def parse_external_id(ext_id):
     """Match an external id to a Commons formating template."""
@@ -132,88 +142,20 @@ def description_cleaner(text, structured=False):
         diffs.
     """
     delimiter = '¤'
-    bad_endings = (  # anything found after one of these should be removed
-        'Publ. Kaudern',
-        'Publ. Walter Kaudern',
-        'Publ. W. Kaudern',
-        'Publ. W.Kaudern',
-        'Publ. Kandun',
-        'Publ. Nordenskiöld:',
-        'Publ.: ',
-        'publicera: ',
-        'Publicerad: ',
-        'Se Kaudern: ',
-        'Se Walter Kaudern:',
-        'Se W. Kaudern:',
-        'Se W.Kaudern:',
-        'Se Linell & Kaudern:',
-        'Se Nordenskiöld:',
-        'Se Erland Nordenskiöld:',
-        'Jämför Nordenskiöld:',
-        'Walter Kaudern: I Celebes obygder',
-        'W. Kaudern: I Celebes obygder',
-        'W.Kaudern: I Celebes obygder.',
-        'W. Kaudern:" I Celebes obygder"',
-        'W. Kaudern: Ethnographical Stud',
-        'W. Kaudern: Structures and settlements',
-        'W. Kaudern: På Madagaskar.',
-        'Nordeskiiöld: Indianerna på Panamanäset',
-        'Jfr. bildark',
-        'Jfr. bildnr.',
-        'Jfr. bindnr.',
-        'Jfr. bild',
-        'Jfr bild',
-        'Jämför bild',
-        'Bildark: ',
-        'Erh: gm köp av',
-        'Erh: gm. köp av',
-        'Erh.: gm köp av',
-        'Erh.: gm. köp av',
-        'Erh. gm. köp av',
-        'erhållen gm. köp av',
-        'Erhållet genom köp av',
-        'Bilden erhållen genom köp av',
-        'Foto erhållet av ',
-        'Fotot erhållit ',
-        'Neg.: ',
-        # 'Negnr',
-        # 'Neg.nr',
-        'Foto av: ',
-        'Foto taget av ',
-        # 'Fotograf: ',
-        'Först. eft.'
-    )
-    bad_starts = (  # anything found before one of these should be removed
-        'Motiv [Gegenstand der Aufnahme]:',
-        'Motiv [Gegenstand der Aufnahmne]:',
-        'Motiv/Gegenstand der Aufnahme:',
-        'Motiv: ',
-        'Gegenstand der Aufnahme',
-    )
-    bad_middle = (  # these should be removed wherever they are found
-        '(negativkuvert)',
-        '(negativpåse)',
-        '(Katalogkort)',
-        '(katalogkort)',
-        '(Katolkort)',
-        '(glasplåt)',
-        '(general katalog)'
-        '(?)'
-    )
-    # clean out any Datum: ... . but beware of . in abbrev.
-    # clean out any Ort: ... . but beware of . in abbrev.
-    # flag odugl.
+    cleaner_patterns = load_cleaner_patterns()
 
-    for test in bad_endings:
+    # anything found after one of these should be removed
+    for test in cleaner_patterns.get('endings'):
         if text.find(test) >= 0:
             text = text[:text.find(test)]
-    for test in bad_starts:
+    # anything found before one of these should be removed
+    for test in cleaner_patterns.get('starts'):
         if text.find(test) >= 0:
             text = text[text.find(test) + len(test):]
 
     # remove blocks inside kept text
-    for test in bad_middle:
-        if text.find(test) >= 0:
+    for test in cleaner_patterns.get('middle'):
+        while text.find(test) >= 0:
             start = text.find(test)
             end = start + len(test)
             text = text[:start].rstrip() + delimiter + text[end + 1:].lstrip()

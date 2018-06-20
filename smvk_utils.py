@@ -225,6 +225,8 @@ def clean_all_descriptions(filename):
             clean_l = l
             for block in cleaned:
                 block = block.strip()
+                if not block:
+                    continue
                 start = clean_l.find(block, end)
                 end = start + len(block)
                 clean_l = '{}<span style="color:blue">{}</span>{}'.format(

@@ -28,13 +28,19 @@ def parse_external_id(ext_id):
     pywikibot.warning('{} is not a recognized external id'.format(ext_id))
 
 
-def smvk_parser(ext_id):
+def smvk_parser(ext_id, label_delimiter='!'):
     """Parser for SMVK identifiers."""
     # Not as sensitive as build_link_template nor is it validated
     museum, type, id = ext_id.split('/', 2)
+    label = None
+    if label_delimiter in id:  # lable is added to the id during a merge
+        id, _, label = id.partition(label_delimiter)
     prefix = ''
     if museum != 'SMVK-MM':  # MM has prefix as part of id
         prefix = '|{}'.format(type)
+
+    if label:
+        return '{{%s-link%s|%s|%s}}' % (museum, prefix, id, label)
     return '{{%s-link%s|%s}}' % (museum, prefix, id)
 
 

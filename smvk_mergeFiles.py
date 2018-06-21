@@ -22,10 +22,12 @@ from csvParser import CsvParser
 
 DELIMITER = '¤'
 LIST_DELIMITER = '|'
+LABEL_DELIMITER = '!'
 
 DEFAULT_OPTIONS = {
     'delimiter': DELIMITER,
     'list_delimiter': LIST_DELIMITER,
+    'label_delimiter': LABEL_DELIMITER,
     'orig_data_file': None,
     'orig_archive_file': None,
     'dupe_data_file': None,
@@ -42,6 +44,8 @@ The first four of these can also be provided as unlabeled arguments.
 -delimiter:STR               string used as delimiter in csv (DEF: {delimiter})
 -list_delimiter:STR          string used as list delimiter in csv \
 (DEF: {list_delimiter})
+-label_delimiter:STR         string used as label delimiter in preserved ids \
+(DEF: {label_delimiter})
 -base_name:STR               base name to use for output files \
 (without file extension)
 
@@ -86,7 +90,7 @@ def merge_data(data_files, options):
     for key, dupe_entry in data_files.get('dupe_data').items():
         orig_photo_id = identify_dupe_id(dupe_entry, candidates, duplicates)
         if orig_photo_id:
-            merge_dupe(main_data.get(orig_photo_id), dupe_entry)
+            merge_dupe(main_data.get(orig_photo_id), dupe_entry, options)
         else:
             if key in main_data:
                 pywikibot.error(
@@ -131,14 +135,15 @@ def identify_dupe_id(entry, candidates, duplicates):
         return candidate.get('orig_photo_id')
 
 
-def merge_dupe(orig_entry, dupe_entry):
+def merge_dupe(orig_entry, dupe_entry, options):
     """
     Merge dupe_data into orig data.
 
     Date is handled differently but for all others the value in dupe is simply
     appended to that of original if different.
-    Validating the result (e.g. iftwo licenses were merged) is handled once the
-    resultign output gets loaded.
+
+    Validating the result (e.g. if two licenses were merged) is handled once
+    the resulting output gets loaded.
     """
     # remove orig_long_id from ext_ids
     try:
@@ -147,7 +152,6 @@ def merge_dupe(orig_entry, dupe_entry):
         dupe_entry.get('ext_ids').remove(orig_long_id)
     except ValueError:
         pass
-    orig_long_id
 
     # merge each field
     for field, dupe_value in dupe_entry.items():
@@ -161,8 +165,7 @@ def merge_dupe(orig_entry, dupe_entry):
 
         # handle conflicting
         if field in ('photo_id', 'db_id', 'museum_obj'):
-            # dupe photo_id is the only data lost in the merge as
-            # museum_obj and db_id are contained within ext_ids
+            # all of these are contained within the ext_ids
             continue
         elif field == 'date':
             # the order and number of the entries has meaning
@@ -189,6 +192,18 @@ def merge_dupe(orig_entry, dupe_entry):
                 orig_entry[field] = '{}. {}'.format(
                     orig_entry.get(field).rstrip(' .'),
                     dupe_entry.get(field)).lstrip(' .')
+
+    # add dupe photo_id to the matching ext_id - photo_id
+    try:
+        dupe_long_id = '{}/{}'.format(
+            dupe_entry.get('museum_obj'), dupe_entry.get('db_id'))
+        orig_entry.get('ext_ids').remove(dupe_long_id)
+        orig_entry.get('ext_ids').append(
+            '{}{}{}'.format(dupe_long_id,
+                            options.get('label_delimiter'),
+                            dupe_entry.get('photo_id')))
+    except ValueError:
+        pass
 
 
 def process_dupe_archive_entry(data, duplicates):

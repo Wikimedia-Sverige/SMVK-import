@@ -365,6 +365,8 @@ class SMVKInfo(MakeBaseInfo):
             'user_config.py file (optional)\n'
             '\t-update_mappings:BOOL if mappings should first be updated '
             'against online sources (defaults to True)\n'
+            '\t-batch_label:STR Label to identify the batch '
+            '(defaults to 2018-03)\n'
         )
         info = super(SMVKInfo, cls).main(usage=usage, *args)
         if info:

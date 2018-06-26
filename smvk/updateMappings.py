@@ -4,7 +4,7 @@
 Create or update mapping lists.
 
 usage:
-    python smvk_updateMappings.py [OPTIONS]
+    python smvk/updateMappings.py [OPTIONS]
 
 &params;
 """
@@ -17,8 +17,8 @@ import batchupload.common as common
 import batchupload.helpers as helpers
 from batchupload.listscraper import MappingList
 
-import smvk_utils as utils
-from csvParser import CsvParser
+import smvk.utils as utils
+from smvk.csvParser import CsvParser
 
 MAPPINGS_DIR = 'mappings'
 DATA_FILE = 'smvk_data.csv'

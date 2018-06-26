@@ -18,9 +18,9 @@ import batchupload.helpers as helpers
 import batchupload.listscraper as listscraper
 from batchupload.make_info import MakeBaseInfo
 
-import smvk_updateMappings as mapping_updater
-import smvk_utils as utils
-from csvParser import CsvParser
+import smvk.updateMappings as mapping_updater
+import smvk.utils as utils
+from smvk.csvParser import CsvParser
 
 MAPPINGS_DIR = 'mappings'
 BATCH_CAT = 'Media contributed by SMVK'  # stem for maintenance categories
@@ -356,7 +356,7 @@ class SMVKInfo(MakeBaseInfo):
         """Command line entry-point."""
         usage = (
             'Usage:'
-            '\tpython smvk_makeInfo.py -metadata_file:PATH -archive_file:PATH '
+            '\tpython smvk/makeInfo.py -metadata_file:PATH -archive_file:PATH '
             '-dir:PATH\n'
             '\t-metadata_file:PATH path to main metadata file\n'
             '\t-archive_file:PATH path to archive card metadata file\n'

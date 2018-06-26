@@ -10,7 +10,7 @@ card pair of files using the same format.
 Duplicate data is removed and differing data is simply appended.
 
 usage:
-    python smvk_mergeFiles.py data1.csv archive1.csv \
+    python smvk/mergeFiles.py data1.csv archive1.csv \
     data2.csv archive2.csv [OPTIONS]
 
 &params;
@@ -18,7 +18,8 @@ usage:
 import pywikibot
 
 import batchupload.common as common
-from csvParser import CsvParser
+
+from smvk.csvParser import CsvParser
 
 DELIMITER = '¤'
 LIST_DELIMITER = '|'

@@ -14,11 +14,11 @@ from collections import Counter, OrderedDict
 import pywikibot
 
 import batchupload.common as common
-import batchupload.csv_methods as csv_methods
 import batchupload.helpers as helpers
 from batchupload.listscraper import MappingList
 
 import smvk_utils as utils
+from csvParser import CsvParser
 
 MAPPINGS_DIR = 'mappings'
 DATA_FILE = 'smvk_data.csv'
@@ -64,20 +64,17 @@ class SMVKMappingUpdater(object):
     def __init__(self, options):
         """Initialise an mapping updater for a SMVK dataset."""
         self.settings = options
+        parser = CsvParser(**self.settings)
 
         self.log = common.LogFile('', self.settings.get('mapping_log_file'))
         self.log.write_w_timestamp('Updater started...')
         self.mappings = load_mappings(
             update_mappings=True,
             mappings_dir=self.settings.get('mappings_dir'))
-        data = load_data(self.settings.get('data_file'),
-                         delimiter=self.settings.get('delimiter'),
-                         list_delimiter=self.settings.get('list_delimiter'))
+        data = parser.load_data(self.settings.get('data_file'))
         # load archive card data to ensure formatting is still valid
-        archive_data = load_archive_data(
-            self.settings.get('archive_file'),
-            delimiter=self.settings.get('delimiter'),
-            list_delimiter=self.settings.get('list_delimiter'))
+        archive_data = parser.load_archive_data(
+            self.settings.get('archive_file'))
 
         self.people_to_map = Counter()
         self.ethnic_to_map = Counter()
@@ -92,7 +89,7 @@ class SMVKMappingUpdater(object):
 
         # validate hard coded mappings
         for ext_id in self.external_to_parse:
-            utils.parse_external_ids(ext_id)
+            utils.parse_external_id(ext_id)
         for expedition in self.expedition_to_match:
             if expedition not in self.mappings.get('expeditions'):
                 pywikibot.warning(
@@ -183,7 +180,7 @@ class SMVKMappingUpdater(object):
         """Go through the raw data breaking out data needing validating."""
         for cards in data.values():
             for card in cards:
-                self.check_for_unexpected_lists(card, card.get('photo_id'))
+                self.check_for_unexpected_lists(card, card.get('photo_ids'))
 
                 if card.get('museum_obj'):
                     museum, _, type = card.get('museum_obj').partition('/')
@@ -202,9 +199,9 @@ class SMVKMappingUpdater(object):
             if image.get('museum_obj'):
                 museum, _, type = image.get('museum_obj').partition('/')
                 self.museum_to_match.add((museum, type))
-            if image.get('ext_id'):
+            if image.get('ext_ids'):
                 self.external_to_parse.update(
-                    image.get('ext_id'))
+                    image.get('ext_ids'))
 
             # keywords - compare without case
             keyword_columns = ('motivord', 'sokord')
@@ -244,97 +241,6 @@ class SMVKMappingUpdater(object):
                 val = image.get(col) or []
                 val = utils.clean_uncertain(common.listify(val), keep=True)
                 self.places_to_map[key].update(val)
-
-
-def load_data(csv_file, delimiter=None, list_delimiter=None):
-    """
-    Load and parse the provided csv file.
-
-    This only parses the main metadata file, not that for archive_cards.
-    This is the only place where the original column names should be mentioned.
-
-    :param csv_file: the filename to load
-    :param delimiter: the delimiter to use for csv cells
-    :param list_delimiter: the delimiter to use for lists within csv cells
-    """
-    delimiter = delimiter or DELIMITER
-    list_delimiter = list_delimiter or LIST_DELIMITER
-    fields = OrderedDict([
-        ('Fotonummer', 'photo_id'),
-        ('Beskrivning', 'description_sv'),
-        ('Motivord', 'motivord'),
-        ('Sökord', 'sokord'),
-        ('Händelse', 'event'),
-        ('Etnisk grupp', 'ethnic'),
-        ('Personnamn, avbildad', 'depicted_persons'),
-        ('Land, Fotograferad', 'land'),
-        ('Region, fotograferad i', 'region'),
-        ('Ort, fotograferad i', 'ort'),
-        ('Geografiskt namn, annat', 'other_geo'),
-        ('Fotograf', 'photographer'),
-        ('Fotodatum', 'date'),
-        ('Personnamn / tillverkare', 'creator'),
-        ('Beskrivning, engelska', 'description_en'),
-        ('Referens / Publicerad i', 'reference_published'),
-        ('Postnr.', 'db_id'),
-        ('Objekt, externt / samma som', 'ext_id'),
-        ('Etn, tidigare', 'ethnic_old'),
-        ('Land, ursprung/brukad', 'depicted_land'),
-        ('Region/Ort, ursprung', 'depicted_places'),
-        ('Referens / källa', 'reference_source'),
-        ('Media/Licens', 'license'),
-        ('Museum/objekt', 'museum_obj')
-    ])
-
-    expected_header = delimiter.join(fields.keys())
-    list_columns = (
-        'Motivord', 'Sökord', 'Etnisk grupp', 'Personnamn, avbildad',
-        'Region, fotograferad i', 'Ort, fotograferad i',
-        'Geografiskt namn, annat', 'Fotodatum', 'Objekt, externt / samma som',
-        'Region/Ort, ursprung', 'Referens / Publicerad i')
-    raw_dict = csv_methods.csv_file_to_dict(
-        csv_file, 'Fotonummer', expected_header, lists=list_columns,
-        delimiter=delimiter,
-        list_delimiter=list_delimiter)
-
-    return utils.relabel_inner_dicts(raw_dict, fields)
-
-
-def load_archive_data(csv_file, delimiter=None, list_delimiter=None):
-    """
-    Load and parse the provided csv file for archive_cards.
-
-    This only parses the archive_cards file, not that for the main metadata.
-    This is the only place where the original column names should be mentioned.
-
-    :param csv_file: the filename to load
-    :param delimiter: the delimiter to use for csv cells
-    :param list_delimiter: the delimiter to use for lists within csv cells
-    """
-    delimiter = delimiter or DELIMITER
-    list_delimiter = list_delimiter or LIST_DELIMITER
-    fields = OrderedDict([
-        ('Id', 'label'),
-        ('Postnr', 'db_id'),
-        ('Museum/objekt', 'museum_obj'),
-        ('Fotonummer', 'photo_id')])
-
-    expected_header = delimiter.join(fields.keys())
-    list_columns = ('Fotonummer', )
-    raw_dict = csv_methods.csv_file_to_dict(
-        csv_file, 'Postnr', expected_header, lists=list_columns,
-        delimiter=delimiter,
-        list_delimiter=list_delimiter)
-    relabeled_dict = utils.relabel_inner_dicts(raw_dict, fields)
-
-    # re-order so photo_id is main key
-    photo_id_dict = {}
-    for k, v in relabeled_dict.items():
-        for photo_id in v.get('photo_id'):
-            if photo_id not in photo_id_dict:
-                photo_id_dict[photo_id] = []
-            photo_id_dict[photo_id].append(v)
-    return photo_id_dict
 
 
 def load_mappings(update_mappings, mappings_dir=None,
@@ -473,13 +379,10 @@ def handle_args(args, usage):
     :return: dict of options
     """
     options = {}
-    expected_args = ('mapping_log_file', 'data_file', 'archive_file',
-                     'mappings_dir', 'delimiter', 'list_delimiter',
-                     'wiki_mapping_root', 'default_intro_text')
 
     for arg in pywikibot.handle_args(args):
         option, sep, value = arg.partition(':')
-        if option.startswith('-') and option[1:] in expected_args:
+        if option.startswith('-') and option[1:] in DEFAULT_OPTIONS.keys():
             options[option[1:]] = common.convert_from_commandline(value)
         else:
             pywikibot.output(usage)

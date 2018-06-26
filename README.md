@@ -2,9 +2,11 @@
 *SMVK-import* is a collection of scripts and tools for the batch upload of
 images from the collections of The National Museums of World Culture (*Statens museer för världskultur*).
 
-As a starting point you are expected to have acorrectly formatted csv file
-provided by the agency.
+As a starting point you are expected to have two a correctly formatted csv
+files (main data + archive cards) provided by the agency.
 
+* `smvk_mergeFiles` is used to merge two csv file pairs from different museums
+  prior to further crunching.
 * `smvk_updateMappings` is used to parse the csv data and create new mapping
   tables for upload to Wikimedia Commons.
 * `smvk_makeInfo` is used to parse the csv and combine it with the mapped data

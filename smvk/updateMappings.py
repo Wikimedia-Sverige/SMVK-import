@@ -38,7 +38,7 @@ DEFAULT_OPTIONS = {
     'default_intro_text': ('{key} mapping table for '
                            '[[Commons:Världskulturmuseerna]]\n')
 }
-PARAMETER_HELP = u"""\
+PARAMETER_HELP = """\
 Basic smvk_updateMappings options:
 -data_file:PATH         path to main metadata file (DEF: {data_file})
 -archive_file:PATH      path to archive data file (DEF: {archive_file})

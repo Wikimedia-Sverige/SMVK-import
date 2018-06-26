@@ -4,7 +4,7 @@
 Create or update mapping lists.
 
 usage:
-    python smvk_updateMappings.py [OPTIONS]
+    python smvk/updateMappings.py [OPTIONS]
 
 &params;
 """
@@ -17,8 +17,8 @@ import batchupload.common as common
 import batchupload.helpers as helpers
 from batchupload.listscraper import MappingList
 
-import smvk_utils as utils
-from csvParser import CsvParser
+import smvk.utils as utils
+from smvk.csvParser import CsvParser
 
 MAPPINGS_DIR = 'mappings'
 DATA_FILE = 'smvk_data.csv'
@@ -38,7 +38,7 @@ DEFAULT_OPTIONS = {
     'default_intro_text': ('{key} mapping table for '
                            '[[Commons:Världskulturmuseerna]]\n')
 }
-PARAMETER_HELP = u"""\
+PARAMETER_HELP = """\
 Basic smvk_updateMappings options:
 -data_file:PATH         path to main metadata file (DEF: {data_file})
 -archive_file:PATH      path to archive data file (DEF: {archive_file})

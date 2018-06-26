@@ -10,15 +10,15 @@ card pair of files using the same format.
 Duplicate data is removed and differing data is simply appended.
 
 usage:
-    python smvk_mergeFiles.py data1.csv archive1.csv \
-    data2.csv archive2.csv [OPTIONS]
+    python smvk/mergeFiles.py data1.csv archive1.csv d2.csv a2.csv [OPTIONS]
 
 &params;
 """
 import pywikibot
 
 import batchupload.common as common
-from csvParser import CsvParser
+
+from smvk.csvParser import CsvParser
 
 DELIMITER = '¤'
 LIST_DELIMITER = '|'
@@ -34,7 +34,7 @@ DEFAULT_OPTIONS = {
     'dupe_archive_file': None,
     'base_name': None
 }
-PARAMETER_HELP = u"""\
+PARAMETER_HELP = """\
 Basic smvk_mergeFiles options:
 The first four of these can also be provided as unlabeled arguments.
 -orig_data_file:PATH         path to main metadata file

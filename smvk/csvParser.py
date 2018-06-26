@@ -4,7 +4,8 @@
 from collections import OrderedDict
 
 import batchupload.csv_methods as csv_methods
-import smvk_utils as utils
+
+import smvk.utils as utils
 
 DELIMITER = '¤'
 LIST_DELIMITER = '|'

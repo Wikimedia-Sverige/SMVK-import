@@ -5,6 +5,7 @@ import batchupload.prepUpload as prep
 
 
 def main(*arguments):
+    """Redirect to real function."""
     prep.main(*arguments)
 
 

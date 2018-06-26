@@ -2,15 +2,22 @@
 # -*- coding: utf-8  -*-
 """Small parser utils for smvk."""
 import re
+import os
 import pywikibot
+
 import batchupload.common as common
 import batchupload.helpers as helpers
 
 cleaner_pattern = None  # to avoid repeated loads
 
 
-def load_cleaner_patterns(filename='cleaner_patterns.json'):
+def load_cleaner_patterns(filename=None):
     """Load the cleaner patterns file if needed."""
+    if not filename:
+        _filename = 'cleaner_patterns.json'
+        filename = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), _filename)
+
     global cleaner_pattern
     if not cleaner_pattern:
         cleaner_pattern = common.open_and_read_file(filename, as_json=True)

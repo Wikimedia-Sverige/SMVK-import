@@ -4,6 +4,7 @@
 from collections import OrderedDict
 
 import batchupload.csv_methods as csv_methods
+import batchupload.common as common
 
 import smvk.utils as utils
 
@@ -97,7 +98,7 @@ class CsvParser(object):
             delimiter=self.delimiter,
             list_delimiter=self.list_delimiter)
 
-        return utils.relabel_inner_dicts(raw_dict, fields)
+        return common.relabel_inner_dicts(raw_dict, fields)
 
     def load_data(self, csv_file):
         """
@@ -137,8 +138,8 @@ class CsvParser(object):
         :param filename: the output filename
         """
         fields, list_columns, key_column = metadata
-        relabelled_data = utils.relabel_inner_dicts(
-            data, utils.invert_dict(fields))
+        relabelled_data = common.relabel_inner_dicts(
+            data, common.invert_dict(fields))
         header = self.delimiter.join(fields.keys())
         csv_methods.dict_to_csv_file(
             filename, relabelled_data, header, delimiter=self.delimiter,

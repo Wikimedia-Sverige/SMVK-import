@@ -59,21 +59,6 @@ def gnm_parser(ext_id):
     return '{{GNM-link|%s}}' % ext_id[len('gnm/photo/GNM'):]
 
 
-# consider movingto BatchUploadTools.common
-def relabel_inner_dicts(obj, key_map):
-    """Update the keys of all dicts in a dict."""
-    for inner in obj.values():
-        for old_key, new_key in key_map.items():
-            inner[new_key] = inner.pop(old_key)
-    return obj
-
-
-def invert_dict(old_dict):
-    """Invert a dict where each value is itself hashable."""
-    # note that OrderedDict gets converted to dict
-    return {v: k for k, v in old_dict.items()}
-
-
 def clean_uncertain(value, keep=False):
     """
     Handle uncertain values in the data.
